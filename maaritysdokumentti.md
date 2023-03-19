@@ -12,4 +12,4 @@
   - [0] <https://dash.harvard.edu/bitstream/handle/1/14398552/BECERRA-SENIORTHESIS-2015.pdf>
   - [1] <https://www.cs.toronto.edu/~cvs/minesweeper/minesweeper.pdf>
 - Opinto-ohjelma: tietojenkäsittelytieteen kandidaatti (TKT)
-- Projektin dokumentaatiossa (ja muualla) käytetty kieli tulee olemaan englanti.
+- Projektin dokumentaatiossa (ja muualla) käytetty kieli tulee olemaan suomi.
