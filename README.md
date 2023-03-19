@@ -4,5 +4,5 @@
 ## Documents
 - [Project specification document](./documentation/projectspecification.md)
 
-## Weekly raports
-1. [Raport 1](./weeklyreports/weeklyreport1.md)
+## Weekly reports
+1. [Report 1](./weeklyreports/weeklyreport1.md)
