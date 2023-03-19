@@ -1,15 +1,15 @@
-## Määrittelydokumentti
+## Project specification
 
-- Toteutan projektin Rust-ohjelmointikielellä.
-  - Voin vertaisarvioida projekteja kielillä: Java, Python, Lua, C, C++, JavaScript, TypeScript, Go, C#.
-- Ratkaistava ongelmani on miinaharavan pelaaminen optimaalisesti, ja toteutan algoritmin, joka ratkaisee kentät mallintamalla ne rajoitelaskentaongelmana, käyttäen David Becerran artikkelissa [0] mainittua Coupled Subsets CSP algoritmia. Tämä algoritmi tutkii yhtälöryhmiä, jotka luodaan perustuen miinaharava-kentän tilaan. Yhtälöryhmien tietorakenne on lista, joka koostuu yhtälöistä. Yhtälöt kuvataan parina, joka koostuu listasta muuttujia (A, B, C...), sekä odotusarvosta (N), jotka muodostavat yhtälön `A + B + C ... = N`.
-- Ohjelma saa syötteenä argumentteja joita voi listata komentorivillä, jotka voi esimerkiksi määritellä kuinka monta peliä pelataan, ja minkä vaikeustasoisia kenttiä se luo pelattavaksi. Ohjelmalla tulee olemaan myös käyttöliittymä, joka näyttää visuaalisesti pelien etenemistä, jolla voi tutkia miten tekoäly pelaa miinaharavaa. Aikataulusta riippuen käyttöliittymästä voi tulla laajempi tai suppeampi.
-- Optimaalista aika- ja tilavaativuutta on vaikea määritellä, koska miinaharavan pelaaminen optimaalisesti on NP-täydellinen ongelma. Voittotodennäköisyyksiä voi kuitenkin optimoida ja mitata, joten tavoitteena olisi päästä Becerran artikkelin [0] mainitsemiin noin 90%, 75% ja 30% voittotodennäköisyyksiin eri vaikeustasoisissa kentissä (beginner, intermediate ja expert).
-  - Beginner-vaikeustason kentät ovat kokoa 8x8, 9x9 tai 10x10, ja niissä on 10 miinaa,
-  - Intermediate-vaikeustason kentät ovat eri kokoisia 13x15 ja 16x16 välillä, ja niissä on 40 miinaa.
-  - Expert-vaikeustason kentät ovat kokoa 16x30 tai 30x16, ja niissä on 99 miinaa.
-- Lähteet:
+- The project will be written in Rust.
+  - I can do peer reviews in the following programming languages: Java, Python, Lua, C, C++, JavaScript, TypeScript, Go, C#
+- The problem I'm solving is playing Minesweeper optimally, and I will implement an algorithm that solves games by modeling them as a constraint satisfication problem, using the Coupled Subsets CSP algorithm from David Becerra's article [0]. This algorithm analyzes sets of constraints, which are created based on the state of the game. The constraint sets will be represented by many lists of constraints, as the top-level data structure. The constraint data structure will be a tuple, consisting of the label (N) and a list of variables (A, B, C...) which will form the constraint `A + B + C ...= N`.
+- The program will take inputs through a GUI, and possibly command line arguments. The GUI will show the state of the game, so the user can follow the games being played out.
+- The complexity of Minesweeper is hard to analyze, because it is an NP-complete problem. The chances of winning a game can however be optimized and measured, so the aim is to reach the win-rates presented in Becerra's article [0]: 90% for beginner levels, 75% for intermediate levels, and 30% for expert levels.
+  - Beginner levels are of size 8x8, 9x9 or 10x10, and they have 10 mines.
+  - Intermediate levels are between size 13x15 and 16x16, and they have 40 mines.
+  - Expert levels are of size 16x30 or 30x16, and they have 99 mines.
+- Sources:
   - [0] <https://dash.harvard.edu/bitstream/handle/1/14398552/BECERRA-SENIORTHESIS-2015.pdf>
   - [1] <https://www.cs.toronto.edu/~cvs/minesweeper/minesweeper.pdf>
-- Opinto-ohjelma: tietojenkäsittelytieteen kandidaatti (TKT)
-- Projektin dokumentaatiossa (ja muualla) käytetty kieli tulee olemaan suomi.
+- Degree programme: tietojenkäsittelytieteen kandidaatti (TKT).
+- The project documentation will use English as the language.
