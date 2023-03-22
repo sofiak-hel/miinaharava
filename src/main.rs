@@ -3,6 +3,7 @@
 #![deny(clippy::all)]
 #![allow(missing_docs)]
 
+use game::GameWindow;
 use minefield::Minefield;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -10,11 +11,10 @@ use sdl2::mouse::MouseButton;
 
 use crate::game::Game;
 use crate::minefield::GameState;
-use crate::window::GameWindow;
 
 pub mod game;
 pub mod minefield;
-pub mod window;
+pub(crate) mod minefield_renderer;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Difficulty {
