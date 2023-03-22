@@ -38,6 +38,7 @@ pub struct Game<'a> {
     quit: bool,
     pub timer: f32,
     pub timer_paused: bool,
+    pub extra_layout: Layout<Color>,
 }
 
 impl<'a> Game<'a> {
@@ -49,10 +50,18 @@ impl<'a> Game<'a> {
         let font_texture = FontTexture::new(&window.texture_creator).unwrap();
         let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
         layout.reset(&LayoutSettings {
-            x: 900.,
+            x: 910.,
             y: 100.,
-            max_width: Some(380.),
+            max_width: Some(370.),
             horizontal_align: HorizontalAlign::Center,
+            ..Default::default()
+        });
+        let mut extra_layout = Layout::new(CoordinateSystem::PositiveYDown);
+        extra_layout.reset(&LayoutSettings {
+            x: 910.,
+            y: 250.,
+            max_width: Some(370.),
+            horizontal_align: HorizontalAlign::Left,
             ..Default::default()
         });
 
@@ -67,6 +76,7 @@ impl<'a> Game<'a> {
             last: Instant::now(),
             timer_paused: true,
             quit: false,
+            extra_layout,
         }
     }
 
@@ -142,6 +152,9 @@ impl<'a> Game<'a> {
         let _ = self
             .font_texture
             .draw_text(self.canvas, &self.fonts, self.layout.glyphs());
+        let _ = self
+            .font_texture
+            .draw_text(self.canvas, &self.fonts, self.extra_layout.glyphs());
 
         self.canvas.present();
     }
@@ -155,6 +168,25 @@ impl<'a> Game<'a> {
 
     pub fn exit(&mut self) {
         self.quit = true;
+    }
+
+    pub fn append_extra<T: Into<String>>(
+        &mut self,
+        text: T,
+        size: Option<f32>,
+        color: Option<Color>,
+    ) {
+        let size = size.unwrap_or(32.);
+        let color = color.unwrap_or(Color::RGB(0xFF, 0xFF, 0));
+        self.extra_layout.append(
+            &self.fonts,
+            &TextStyle::with_user_data(&text.into(), size, 0, color),
+        );
+    }
+
+    pub fn append_keybind<T: Into<String>, U: Into<String>>(&mut self, keybind: T, description: U) {
+        self.append_extra(format!("[{}] ", keybind.into()), None, Some(Color::RED));
+        self.append_extra(format!("{}\n", description.into()), None, None);
     }
 
     fn append_text<T: Into<String>>(&mut self, text: T, size: Option<f32>, color: Option<Color>) {
