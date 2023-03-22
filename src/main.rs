@@ -7,13 +7,12 @@ use fontdue::layout::{CoordinateSystem, HorizontalAlign, Layout, LayoutSettings,
 use fontdue::Font;
 use fontdue_sdl2::FontTexture;
 use minefield::Minefield;
-use renderer::Renderer;
+use renderer::MinefieldRenderer;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use std::future::Pending;
 use std::time::Instant;
 
 use crate::minefield::GameState;
@@ -43,7 +42,8 @@ pub fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut last = Instant::now();
 
-    let renderer = Renderer::init(&texture_creator);
+    let minefield_area = Rect::new(0, 0, 900, 720);
+    let renderer = MinefieldRenderer::init(&texture_creator, minefield_area);
 
     let roboto_regular = Font::from_bytes(FONT, Default::default()).unwrap();
     let fonts = &[roboto_regular];
@@ -60,16 +60,6 @@ pub fn main() {
     const size: (usize, usize) = (10, 10);
     let mut minefield = Minefield::<{ size.0 }, { size.1 }>::generate(10);
 
-    let minefield_area = Rect::new(0, 0, 900, 720);
-    let w = minefield_area.width() as usize / size.0;
-    let h = minefield_area.height() as usize / size.1;
-    let scale = w.min(h);
-    let minefield_target = Rect::from_center(
-        minefield_area.center(),
-        (size.0 * scale) as u32,
-        (size.1 * scale) as u32,
-    );
-
     let mut time = 0.;
 
     'running: loop {
@@ -81,11 +71,6 @@ pub fn main() {
             time += delta;
         }
 
-        canvas.set_draw_color(Color::RGB(40, 40, 40));
-        canvas.clear();
-        canvas.set_draw_color(Color::RGB(64, 64, 150));
-        canvas.fill_rect(minefield_area).unwrap();
-
         for event in event_pump.poll_iter() {
             match event {
                 Event::MouseButtonUp {
@@ -94,12 +79,12 @@ pub fn main() {
                     if minefield.game_state() == GameState::Pending {
                         match mouse_btn {
                             MouseButton::Left => {
-                                if let Some(coord) = Renderer::get_coord(minefield_target, (x, y)) {
+                                if let Some(coord) = renderer.get_coord((x, y)) {
                                     minefield.reveal(coord).unwrap();
                                 }
                             }
                             MouseButton::Right => {
-                                if let Some(coord) = Renderer::get_coord(minefield_target, (x, y)) {
+                                if let Some(coord) = renderer.get_coord((x, y)) {
                                     minefield.flag(coord).unwrap();
                                 }
                             }
@@ -125,7 +110,12 @@ pub fn main() {
             None
         };
 
-        renderer.draw(&minefield, &mut canvas, minefield_target, drag_pos);
+        canvas.set_draw_color(Color::RGB(40, 40, 40));
+        canvas.clear();
+        canvas.set_draw_color(Color::RGB(64, 64, 150));
+        canvas.fill_rect(minefield_area).unwrap();
+
+        renderer.draw(&minefield, &mut canvas, drag_pos);
 
         layout.clear();
         layout.append(

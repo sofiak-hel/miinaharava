@@ -12,17 +12,19 @@ static ATLAS_BYTES: &[u8] = include_bytes!("./atlas.bmp");
 const SIZE: u32 = 16;
 const STRIDE: i32 = 16;
 
-pub struct Renderer<'a> {
+pub struct MinefieldRenderer<'a> {
     atlas: Texture<'a>,
+    target: Rect,
 }
 
-impl<'a> Renderer<'a> {
-    pub fn init(texture_creator: &'a TextureCreator<WindowContext>) -> Self {
+impl<'a> MinefieldRenderer<'a> {
+    pub fn init(texture_creator: &'a TextureCreator<WindowContext>, target: Rect) -> Self {
         let surface = Surface::load_bmp_rw(&mut RWops::from_bytes(ATLAS_BYTES).unwrap()).unwrap();
-        Renderer {
+        MinefieldRenderer {
             atlas: texture_creator
                 .create_texture_from_surface(surface)
                 .unwrap(),
+            target,
         }
     }
 
@@ -30,10 +32,9 @@ impl<'a> Renderer<'a> {
         &self,
         minefield: &Minefield<W, H>,
         canvas: &mut Canvas<Window>,
-        target: Rect,
         mouse: Option<(i32, i32)>,
     ) {
-        let (pos_x, pos_y, total_w, total_h) = target.into();
+        let (pos_x, pos_y, total_w, total_h) = self.get_target::<W, H>().into();
         let (w, h) = (total_w / W as u32, total_h / H as u32);
         for y in 0..H {
             for x in 0..W {
@@ -51,10 +52,10 @@ impl<'a> Renderer<'a> {
     }
 
     pub fn get_coord<const W: usize, const H: usize>(
-        target: Rect,
+        &self,
         mouse: (i32, i32),
     ) -> Option<Coord<W, H>> {
-        let (pos_x, pos_y, total_w, total_h) = target.into();
+        let (pos_x, pos_y, total_w, total_h) = self.get_target::<W, H>().into();
         let (w, h) = (total_w as i32 / W as i32, total_h as i32 / H as i32);
         let x = (mouse.0 - pos_x) / w;
         let y = (mouse.1 - pos_y) / h;
@@ -63,6 +64,13 @@ impl<'a> Renderer<'a> {
         } else {
             None
         }
+    }
+
+    fn get_target<const W: usize, const H: usize>(&self) -> Rect {
+        let w = self.target.width() as usize / W;
+        let h = self.target.height() as usize / H;
+        let scale = w.min(h);
+        Rect::from_center(self.target.center(), (W * scale) as u32, (H * scale) as u32)
     }
 }
 
