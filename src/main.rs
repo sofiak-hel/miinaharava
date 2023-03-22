@@ -3,7 +3,10 @@
 #![deny(clippy::all)]
 #![allow(missing_docs)]
 
+use minefield::{Coord, Minefield};
+use renderer::Renderer;
 use sdl2::keyboard::Keycode;
+use sdl2::mouse::{self, MouseButton};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::rwops::RWops;
@@ -11,6 +14,7 @@ use sdl2::{event::Event, surface::Surface};
 use std::time::Instant;
 
 pub mod minefield;
+pub mod renderer;
 
 /// main docs
 pub fn main() {
@@ -32,10 +36,17 @@ pub fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut last = Instant::now();
 
-    let atlas =
-        Surface::load_bmp_rw(&mut RWops::from_bytes(include_bytes!("./atlas.bmp")).unwrap())
-            .unwrap();
-    let texture = texture_creator.create_texture_from_surface(atlas).unwrap();
+    const size: (usize, usize) = (10, 10);
+    let mut minefield = Minefield::<{ size.0 }, { size.1 }>::generate(10);
+    let renderer = Renderer::init(&texture_creator);
+    let w = 800 / size.0;
+    let h = 600 / size.1;
+    let scale = w.min(h);
+    let target = Rect::from_center(
+        canvas.viewport().center(),
+        (size.0 * scale) as u32,
+        (size.1 * scale) as u32,
+    );
 
     'running: loop {
         let now = Instant::now();
@@ -44,16 +55,25 @@ pub fn main() {
 
         canvas.set_draw_color(Color::RGB(64, 64, 150));
         canvas.clear();
-        canvas
-            .copy(
-                &texture,
-                Rect::new(16, 16, 16, 16),
-                Rect::from_center(canvas.viewport().center(), 160, 160),
-            )
-            .unwrap();
 
         for event in event_pump.poll_iter() {
             match event {
+                Event::MouseButtonUp {
+                    mouse_btn, x, y, ..
+                } => match mouse_btn {
+                    MouseButton::Left => {
+                        if let Some(coord) = Renderer::get_coord(target, (x, y)) {
+                            minefield.reveal(coord).unwrap();
+                        }
+                    }
+                    MouseButton::Right => {
+                        if let Some(coord) = Renderer::get_coord(target, (x, y)) {
+                            minefield.flag(coord).unwrap();
+                        }
+                    }
+                    _ => {}
+                },
+
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
@@ -62,6 +82,14 @@ pub fn main() {
                 _ => {}
             }
         }
+        let mouse_state = event_pump.mouse_state();
+        let drag_pos = if mouse_state.left() || mouse_state.right() {
+            Some((mouse_state.x(), mouse_state.y()))
+        } else {
+            None
+        };
+
+        renderer.draw(&minefield, &mut canvas, target, drag_pos);
         // The rest of the game loop goes here...
 
         canvas.present();
