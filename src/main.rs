@@ -59,19 +59,21 @@ pub fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> 
                 Event::MouseButtonUp {
                     mouse_btn, x, y, ..
                 } => {
-                    mouse_pressed = false;
-                    match mouse_btn {
-                        MouseButton::Left => {
-                            if let Some(coord) = game.get_coord((x, y)) {
-                                minefield.reveal(coord).unwrap();
+                    if minefield.game_state() == GameState::Pending {
+                        mouse_pressed = false;
+                        match mouse_btn {
+                            MouseButton::Left => {
+                                if let Some(coord) = game.get_coord((x, y)) {
+                                    minefield.reveal(coord).unwrap();
+                                }
                             }
-                        }
-                        MouseButton::Right => {
-                            if let Some(coord) = game.get_coord((x, y)) {
-                                minefield.flag(coord).unwrap();
+                            MouseButton::Right => {
+                                if let Some(coord) = game.get_coord((x, y)) {
+                                    minefield.flag(coord).unwrap();
+                                }
                             }
+                            _ => {}
                         }
-                        _ => {}
                     }
                     None
                 }

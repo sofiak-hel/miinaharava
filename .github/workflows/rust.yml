@@ -23,12 +23,11 @@ jobs:
       run: |
         strip target/release/miinaharava
         mv target/release/miinaharava miinaharava
-        zip miinaharava.zip miinaharava
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
-        name: miinaharava-linux.zip
-        path: miinaharava.zip
+        name: miinaharava-linux
+        path: miinaharava
   build-windows:
     runs-on: windows-latest
     steps:
@@ -41,31 +40,8 @@ jobs:
     - name: Post-process
       run: |
         mv target/release/miinaharava.exe miinaharava.exe
-        7z a miinaharava.zip miinaharava.exe
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
-        name: miinaharava-windows.zip
-        path: miinaharava.zip
-  build-macos:
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Install cargo-bundle
-      run: cargo install cargo-bundle
-    - name: Build
-      run: cargo build --release --verbose
-    - name: Run tests
-      run: |
-        cargo test --release --verbose
-    - name: Post-process
-      run: |
-        cargo bundle --release
-        strip target/release/bundle/osx/Miinaharava.app/Contents/MacOS/miinaharava
-        mv target/release/bundle/osx/Miinaharava.app Miinaharava.app
-        zip -r miinaharava.zip Miinaharava.app
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: miinaharava-macos.zip
-        path: miinaharava.zip
+        name: miinaharava-windows
+        path: miinaharava

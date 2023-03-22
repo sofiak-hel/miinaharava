@@ -84,7 +84,7 @@ impl<'a> Game<'a> {
         let mut extra_layout = Layout::new(CoordinateSystem::PositiveYDown);
         extra_layout.reset(&LayoutSettings {
             x: 910.,
-            y: 250.,
+            y: 300.,
             max_width: Some(370.),
             horizontal_align: HorizontalAlign::Left,
             ..Default::default()
