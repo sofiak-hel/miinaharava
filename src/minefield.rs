@@ -47,6 +47,7 @@ pub enum GameState {
 pub struct Minefield<const W: usize, const H: usize> {
     mine_indices: [[bool; W]; H],
     pub field: [[Cell; W]; H],
+    pub mines: u8,
 }
 
 impl<const W: usize, const H: usize> Minefield<W, H> {
@@ -63,6 +64,7 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
         Minefield {
             mine_indices,
             field: [[Cell::Hidden; W]; H],
+            mines,
         }
     }
 

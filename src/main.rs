@@ -3,159 +3,94 @@
 #![deny(clippy::all)]
 #![allow(missing_docs)]
 
-use fontdue::layout::{CoordinateSystem, HorizontalAlign, Layout, LayoutSettings, TextStyle};
-use fontdue::Font;
-use fontdue_sdl2::FontTexture;
 use minefield::Minefield;
-use renderer::MinefieldRenderer;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use std::time::Instant;
 
+use crate::game::Game;
 use crate::minefield::GameState;
+use crate::window::GameWindow;
 
+pub mod game;
 pub mod minefield;
-pub mod renderer;
+pub mod window;
 
-static FONT: &[u8] = include_bytes!("./Outfit-Medium.ttf");
+#[derive(Clone, Copy, Debug)]
+pub enum Difficulty {
+    Easy,
+    Intermediate,
+    Expert,
+}
 
 /// main docs
 pub fn main() {
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
+    let mut window = GameWindow::start();
+    let mut game = Game::init(&mut window);
+    let mut difficulty = Some(Difficulty::Easy);
+    while let Some(diff) = difficulty {
+        difficulty = start_game(&mut game, diff);
+    }
+}
 
-    let window = video_subsystem
-        .window("minesweeper", 1280, 720)
-        .position_centered()
-        .build()
-        .unwrap();
+fn start_game(game: &mut Game, difficulty: Difficulty) -> Option<Difficulty> {
+    game.timer = 0.;
+    match difficulty {
+        Difficulty::Easy => game_main::<10, 10>(game, 10),
+        Difficulty::Intermediate => game_main::<16, 16>(game, 40),
+        Difficulty::Expert => game_main::<30, 16>(game, 99),
+    }
+}
 
-    let mut canvas = window.into_canvas().present_vsync().build().unwrap();
-    let texture_creator = canvas.texture_creator();
+pub fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Option<Difficulty> {
+    let mut mouse_pressed = false;
+    let mut minefield = Minefield::<W, H>::generate(mines);
+    let mut next_difficulty = None;
 
-    canvas.set_draw_color(Color::RGB(0, 255, 255));
-    canvas.clear();
-    canvas.present();
-    let mut event_pump = sdl_context.event_pump().unwrap();
-    let mut last = Instant::now();
-
-    let minefield_area = Rect::new(0, 0, 900, 720);
-    let renderer = MinefieldRenderer::init(&texture_creator, minefield_area);
-
-    let roboto_regular = Font::from_bytes(FONT, Default::default()).unwrap();
-    let fonts = &[roboto_regular];
-    let mut font_texture = FontTexture::new(&texture_creator).unwrap();
-    let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
-    layout.reset(&LayoutSettings {
-        x: 900.,
-        y: 100.,
-        max_width: Some(380.),
-        horizontal_align: HorizontalAlign::Center,
-        ..Default::default()
-    });
-
-    const size: (usize, usize) = (10, 10);
-    let mut minefield = Minefield::<{ size.0 }, { size.1 }>::generate(10);
-
-    let mut time = 0.;
-
-    'running: loop {
-        let now = Instant::now();
-        let delta = (Instant::now() - last).as_secs_f32();
-        last = now;
-
-        if minefield.game_state() == GameState::Pending {
-            time += delta;
-        }
-
-        for event in event_pump.poll_iter() {
-            match event {
+    while let (Some(events), None) = (game.update(), next_difficulty) {
+        for event in events {
+            let next_diff = match event {
                 Event::MouseButtonUp {
                     mouse_btn, x, y, ..
                 } => {
-                    if minefield.game_state() == GameState::Pending {
-                        match mouse_btn {
-                            MouseButton::Left => {
-                                if let Some(coord) = renderer.get_coord((x, y)) {
-                                    minefield.reveal(coord).unwrap();
-                                }
+                    mouse_pressed = false;
+                    match mouse_btn {
+                        MouseButton::Left => {
+                            if let Some(coord) = game.get_coord((x, y)) {
+                                minefield.reveal(coord).unwrap();
                             }
-                            MouseButton::Right => {
-                                if let Some(coord) = renderer.get_coord((x, y)) {
-                                    minefield.flag(coord).unwrap();
-                                }
-                            }
-                            _ => {}
                         }
+                        MouseButton::Right => {
+                            if let Some(coord) = game.get_coord((x, y)) {
+                                minefield.flag(coord).unwrap();
+                            }
+                        }
+                        _ => {}
                     }
+                    None
                 }
-
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
+                Event::KeyDown {
+                    keycode: Some(keycode),
                     ..
-                } => break 'running,
-                _ => {}
-            }
+                } => match keycode {
+                    Keycode::Num1 => Some(Difficulty::Easy),
+                    Keycode::Num2 => Some(Difficulty::Intermediate),
+                    Keycode::Num3 => Some(Difficulty::Expert),
+                    _ => None,
+                },
+                Event::MouseButtonDown { .. } => {
+                    mouse_pressed = true;
+                    None
+                }
+                _ => None,
+            };
+            next_difficulty = next_diff.or(next_difficulty);
         }
-        let mouse_state = event_pump.mouse_state();
-        let drag_pos = if (mouse_state.left() || mouse_state.right())
-            && minefield.game_state() == GameState::Pending
-        {
-            Some((mouse_state.x(), mouse_state.y()))
-        } else {
-            None
-        };
-
-        canvas.set_draw_color(Color::RGB(40, 40, 40));
-        canvas.clear();
-        canvas.set_draw_color(Color::RGB(64, 64, 150));
-        canvas.fill_rect(minefield_area).unwrap();
-
-        renderer.draw(&minefield, &mut canvas, drag_pos);
-
-        layout.clear();
-        layout.append(
-            fonts,
-            &TextStyle::with_user_data(
-                &format!("{}, {}\n", size.0, size.1), // The text to lay out
-                32.0,                                 // The font size
-                0,                                    // The font index (Roboto Regular)
-                Color::RGB(0xFF, 0xFF, 0),            // The color of the text
-            ),
+        game.timer_paused = minefield.game_state() != GameState::Pending;
+        game.draw(
+            &minefield,
+            mouse_pressed && minefield.game_state() == GameState::Pending,
         );
-        layout.append(
-            fonts,
-            &TextStyle::with_user_data(
-                &format!("{time:.1}\n"),   // The text to lay out
-                32.0,                      // The font size
-                0,                         // The font index (Roboto Regular)
-                Color::RGB(0xFF, 0xFF, 0), // The color of the text
-            ),
-        );
-        let text_style = match minefield.game_state() {
-            GameState::GameOver => Some(TextStyle::with_user_data(
-                "Game over!",
-                32.0,
-                0,
-                Color::RGB(0xFF, 0, 0),
-            )),
-            GameState::Victory => Some(TextStyle::with_user_data(
-                "Victory!",
-                32.0,
-                0,
-                Color::RGB(0, 0xFF, 0),
-            )),
-            GameState::Pending => None,
-        };
-        if let Some(text_style) = text_style {
-            layout.append(fonts, &text_style);
-        }
-        let _ = font_texture.draw_text(&mut canvas, fonts, layout.glyphs());
-
-        canvas.present();
     }
+    next_difficulty
 }
