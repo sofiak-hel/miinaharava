@@ -27,7 +27,7 @@ pub enum MinefieldError {
     InvalidCoordinate,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Cell {
     Empty,
     Label(u8),
@@ -36,7 +36,14 @@ pub enum Cell {
     Mine,
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum GameState {
+    Victory,
+    GameOver,
+    Pending,
+}
+
+#[derive(Clone, Debug)]
 pub struct Minefield<const W: usize, const H: usize> {
     mine_indices: [[bool; W]; H],
     pub field: [[Cell; W]; H],
@@ -59,8 +66,20 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
         }
     }
 
-    pub fn is_game_over(&self) -> bool {
-        self.field.into_iter().flatten().any(|c| c == Cell::Mine)
+    pub fn game_state(&self) -> GameState {
+        if self.field.into_iter().flatten().any(|c| c == Cell::Mine) {
+            GameState::GameOver
+        } else if self
+            .field
+            .into_iter()
+            .flatten()
+            .zip(self.mine_indices.into_iter().flatten())
+            .all(|(c, is_mine)| (c == Cell::Hidden || c == Cell::Flag) == is_mine)
+        {
+            GameState::Victory
+        } else {
+            GameState::Pending
+        }
     }
 
     pub fn reveal(&mut self, coord: Coord<W, H>) -> Result<(), MinefieldError> {
