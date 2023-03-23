@@ -24,7 +24,7 @@ jobs:
         strip target/release/miinaharava
         mv target/release/miinaharava miinaharava
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: miinaharava-linux
         path: miinaharava
@@ -41,7 +41,7 @@ jobs:
       run: |
         mv target/release/miinaharava.exe miinaharava.exe
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: miinaharava-windows
-        path: miinaharava
+        path: miinaharava.exe
