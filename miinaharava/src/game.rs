@@ -66,6 +66,11 @@ pub struct Game<'a> {
     pub extra_layout: Layout<Color>,
 }
 
+pub struct GameEvents {
+    pub events: Vec<Event>,
+    pub mouse_pos: (i32, i32),
+}
+
 impl<'a> Game<'a> {
     pub fn init(window: &'a mut GameWindow) -> Game<'a> {
         let minefield_area = Rect::new(0, 0, 900, 720);
@@ -105,7 +110,7 @@ impl<'a> Game<'a> {
         }
     }
 
-    pub fn update(&mut self) -> Option<Vec<Event>> {
+    pub fn update(&mut self) -> Option<GameEvents> {
         let now = Instant::now();
         let delta = (Instant::now() - self.last).as_secs_f32();
         self.last = now;
@@ -126,14 +131,18 @@ impl<'a> Game<'a> {
         if self.quit {
             None
         } else {
-            Some(events)
+            let mouse_state = self.event_pump.mouse_state();
+            Some(GameEvents {
+                events,
+                mouse_pos: (mouse_state.x(), mouse_state.y()),
+            })
         }
     }
 
     pub fn draw<const W: usize, const H: usize>(
         &mut self,
         minefield: &Minefield<W, H>,
-        show_hover: bool,
+        hover_tile: Option<Coord<W, H>>,
     ) {
         self.canvas.set_draw_color(Color::RGB(40, 40, 40));
         self.canvas.clear();
@@ -141,15 +150,8 @@ impl<'a> Game<'a> {
         self.canvas
             .fill_rect(self.minefield_renderer.get_target::<W, H>())
             .unwrap();
-
-        let mouse_pos = if show_hover {
-            let state = self.event_pump.mouse_state();
-            Some((state.x(), state.y()))
-        } else {
-            None
-        };
         self.minefield_renderer
-            .draw(minefield, self.canvas, mouse_pos);
+            .draw(minefield, self.canvas, hover_tile);
 
         self.layout.clear();
         self.append_text(format!("{}, {}\n", W, H), None, None);

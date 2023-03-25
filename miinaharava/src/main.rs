@@ -3,18 +3,15 @@
 #![deny(clippy::all)]
 #![warn(missing_docs)]
 
-use game::GameWindow;
-use minefield::Minefield;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::mouse::MouseButton;
-
-use crate::game::Game;
-use crate::minefield::GameState;
-
-pub mod game;
-pub mod minefield;
-pub(crate) mod minefield_renderer;
+use miinaharava::{
+    game::{Game, GameWindow},
+    minefield::{GameState, Minefield},
+};
+use sdl2::{
+    event::Event,
+    keyboard::Keycode,
+    mouse::{self, MouseButton},
+};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Difficulty {
@@ -54,7 +51,7 @@ fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Opti
     let mut next_difficulty = None;
 
     while let (Some(events), None) = (game.update(), next_difficulty) {
-        for event in events {
+        for event in events.events {
             let next_diff = match event {
                 Event::MouseButtonUp {
                     mouse_btn, x, y, ..
@@ -84,11 +81,13 @@ fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Opti
             };
             next_difficulty = next_diff.or(next_difficulty);
         }
+        let hover_tile = if mouse_pressed && minefield.game_state() == GameState::Pending {
+            game.get_coord(events.mouse_pos)
+        } else {
+            None
+        };
         game.timer_paused = minefield.game_state() != GameState::Pending;
-        game.draw(
-            &minefield,
-            mouse_pressed && minefield.game_state() == GameState::Pending,
-        );
+        game.draw(&minefield, hover_tile);
     }
     next_difficulty
 }

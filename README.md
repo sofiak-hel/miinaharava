@@ -1,6 +1,7 @@
 
 # Mine sweeper
 
+[![Rust](https://github.com/sofiak-hel/minesweeper/actions/workflows/rust.yml/badge.svg)](https://github.com/sofiak-hel/minesweeper/actions/workflows/rust.yml)
 [![codecov](https://codecov.io/gh/sofiak-hel/minesweeper/branch/main/graph/badge.svg?token=LK0NOTUKGI)](https://codecov.io/gh/sofiak-hel/minesweeper)
 
 This repository contains two Rust projects:  
@@ -15,7 +16,7 @@ install and update rust is using [rustup](https://rustup.rs/).
 2. To run the human-playable `miinaharava` run `cargo run --release -p miinaharava`
 3. To run the AI driven minesweeper, run `cargo run --release -p minesweeper-ai`
 
-## Testing
+## Testing and coverage
 Testing can be run simply by running `cargo test` in the root folder of this
 repository.  
 To get coverage in the terminal:

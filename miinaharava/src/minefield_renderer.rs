@@ -32,7 +32,7 @@ impl<'a> MinefieldRenderer<'a> {
         &self,
         minefield: &Minefield<W, H>,
         canvas: &mut Canvas<Window>,
-        mouse: Option<(i32, i32)>,
+        hover_tile: Option<Coord<W, H>>,
     ) {
         let (pos_x, pos_y, total_w, total_h) = self.get_target::<W, H>().into();
         let (w, h) = (total_w / W as u32, total_h / H as u32);
@@ -44,7 +44,10 @@ impl<'a> MinefieldRenderer<'a> {
                     w,
                     h,
                 );
-                let hover = mouse.map(|m| dest_rect.contains_point(m)).unwrap_or(false);
+                let hover = hover_tile
+                    .as_ref()
+                    .map(|h| h == &Coord::<W, H>(x, y))
+                    .unwrap_or(false);
                 let source_rect = Rect::from(source(minefield.field[y][x], hover));
                 canvas.copy(&self.atlas, source_rect, dest_rect).unwrap();
             }

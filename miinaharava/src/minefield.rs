@@ -1,5 +1,6 @@
 use arrayvec::ArrayVec;
 
+#[derive(PartialEq, Eq)]
 pub struct Coord<const W: usize, const H: usize>(pub usize, pub usize);
 
 impl<const W: usize, const H: usize> Coord<W, H> {
