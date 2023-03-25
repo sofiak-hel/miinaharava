@@ -58,7 +58,7 @@ jobs:
       - name:                   Install cmake
         run: |
           apt-get update -y -qq
-          apt-get install cmake
+          apt-get install -y cmake
       - name:                   Generate code coverage
         run: |
           cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml

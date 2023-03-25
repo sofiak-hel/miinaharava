@@ -9,3 +9,8 @@
 - Improve UI, and usability
 - Rearchitecture the whole thing for future-proofing
 - Add more difficulty levels to the testing
+
+
+## sat 25.03.23
+
+### 16:00 - 
