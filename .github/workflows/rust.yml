@@ -56,7 +56,10 @@ jobs:
       - name:                   Checkout repository
         uses:                   actions/checkout@v2
       - name:                   Install cmake
-        run: apt install cmake
+        run: |
+          sudo add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu `lsb_release -sc` main universe restricted multiverse"
+          sudo apt-get update -y -qq
+          sudo apt-get install cmake
       - name:                   Generate code coverage
         run: |
           cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
