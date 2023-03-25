@@ -1,11 +1,13 @@
+use std::hint::black_box;
+
 use crate::minefield::{Cell, Coord, GameState, Minefield, MinefieldError};
 
 #[test]
 fn test_generation() {
     for mines in 0..=100 {
-        let mut minefield = Minefield::<10, 10>::generate(mines).unwrap();
+        let mut minefield = Minefield::<10, 10>::generate(black_box(mines)).unwrap();
 
-        assert_eq!(minefield.mines, mines);
+        assert_eq!(minefield.mines, black_box(mines));
 
         let indices = minefield.get_mine_indices();
         let mut mine_count = 0;
@@ -111,6 +113,18 @@ fn test_flag() {
             assert_eq!(item, Cell::Hidden);
         }
     }
+
+    // Test clicking an empty cell
+    let mut minefield = Minefield::<10, 10>::generate(10).unwrap();
+    let empty_coord = find_cell(&mut minefield, false).unwrap();
+    minefield.reveal(empty_coord).unwrap();
+    let curr_cell = minefield.field[empty_coord.1][empty_coord.0];
+
+    // Try to flag and unflag the now revealed cell, should do nothing
+    minefield.flag(empty_coord).unwrap();
+    assert_eq!(minefield.field[empty_coord.1][empty_coord.0], curr_cell);
+    minefield.flag(empty_coord).unwrap();
+    assert_eq!(minefield.field[empty_coord.1][empty_coord.0], curr_cell);
 }
 
 #[test]

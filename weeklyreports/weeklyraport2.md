@@ -16,4 +16,5 @@
 ### 16:00 - 16:40
 - Code coverage setting up
 
-### 16:40 - 00:00
+### 16:40 - 18:45
+- Write tests and documentation for miinaharava
