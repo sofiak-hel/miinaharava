@@ -2,10 +2,12 @@
 //! drawing and is entirely sufficient in of itself if a simple abstract
 //! representation is only needed.
 
+use std::fmt::Debug;
+
 use arrayvec::ArrayVec;
 
 /// Represents a tile coordinate on the minefield.
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub struct Coord<const W: usize, const H: usize>(pub usize, pub usize);
 
 impl<const W: usize, const H: usize> Coord<W, H> {
@@ -29,6 +31,12 @@ impl<const W: usize, const H: usize> Coord<W, H> {
     /// Returns a random valid coordinate
     pub fn random() -> Coord<W, H> {
         Coord(rand::random::<usize>() % W, rand::random::<usize>() % H)
+    }
+}
+
+impl<const W: usize, const H: usize> Debug for Coord<W, H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.0, self.1)
     }
 }
 
@@ -140,7 +148,10 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
                 self.field[coord.1][coord.0] = cell;
                 if cell == Cell::Empty {
                     for neighbor in coord.neighbours() {
-                        self.reveal(neighbor)?;
+                        match self.reveal(neighbor) {
+                            Err(MinefieldError::GameHasEnded) => break,
+                            e => e?,
+                        };
                     }
                 }
             }

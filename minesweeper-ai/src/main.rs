@@ -4,6 +4,8 @@
 #![warn(missing_docs)]
 #![warn(clippy::missing_docs_in_private_items)]
 
+use std::time::Instant;
+
 use ai::{ponder, Decision};
 use miinaharava::{
     game::{Game, GameWindow},
@@ -12,6 +14,7 @@ use miinaharava::{
 };
 
 mod ai;
+mod csp;
 
 #[derive(Clone, Copy, Debug)]
 enum Difficulty {
@@ -36,6 +39,7 @@ pub fn main() {
     }
 }
 
+/// qwe
 fn start_game(game: &mut Game, difficulty: Difficulty) -> Option<Difficulty> {
     game.timer = 0.;
     match difficulty {
@@ -45,9 +49,11 @@ fn start_game(game: &mut Game, difficulty: Difficulty) -> Option<Difficulty> {
     }
 }
 
+/// asd
 fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Option<Difficulty> {
     let mut minefield = Minefield::<W, H>::generate(mines).unwrap();
     let mut next_difficulty = None;
+    let mut last_move = Instant::now();
 
     while let (Some(events), None) = (game.update(), next_difficulty) {
         for event in events.events {
@@ -67,12 +73,24 @@ fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Opti
         }
 
         // AI decision making here
-        let decisions = ponder(&minefield);
-        for decision in decisions {
-            match decision {
-                Decision::Reveal(coord) => minefield.reveal(coord).unwrap(),
-                Decision::Flag(coord) => minefield.flag(coord).unwrap(),
-            };
+        if minefield.game_state() == GameState::Pending {
+            let start = Instant::now();
+            while minefield.game_state() == GameState::Pending {
+                let decisions = ponder(&minefield);
+                if decisions.is_empty() {
+                    break;
+                }
+                dbg!(&decisions);
+                for decision in decisions {
+                    if minefield.game_state() == GameState::Pending {
+                        match decision {
+                            Decision::Reveal(coord) => minefield.reveal(coord).unwrap(),
+                            Decision::Flag(coord) => minefield.flag(coord).unwrap(),
+                        };
+                    }
+                }
+            }
+            println!("{:?}", Instant::now() - start);
         }
 
         game.timer_paused = minefield.game_state() != GameState::Pending;

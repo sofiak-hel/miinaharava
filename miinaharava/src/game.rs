@@ -92,6 +92,8 @@ pub struct GameEvents {
     pub events: Vec<Event>,
     /// Current mouse position in pixels.
     pub mouse_pos: (i32, i32),
+    /// Timedelta (in seconds) since last frame
+    pub delta: f32,
 }
 
 impl<'a> Game<'a> {
@@ -161,6 +163,7 @@ impl<'a> Game<'a> {
             Some(GameEvents {
                 events,
                 mouse_pos: (mouse_state.x(), mouse_state.y()),
+                delta,
             })
         }
     }

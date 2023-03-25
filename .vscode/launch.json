@@ -25,6 +25,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'minesweeper-ai'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=minesweeper-ai",
+                    "--package=minesweeper-ai"
+                ],
+                "filter": {
+                    "name": "minesweeper-ai",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'miinaharava'",
             "cargo": {
                 "args": [
