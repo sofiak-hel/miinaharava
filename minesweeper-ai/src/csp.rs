@@ -1,12 +1,22 @@
-use arrayvec::ArrayVec;
-use miinaharava::minefield::{self, Cell, Coord, Minefield};
+//! This module contains everything related to specifically solving the
+//! Constraint Satisfaction Problem.
+
+use miinaharava::minefield::{Cell, Coord, Minefield};
 use std::fmt::Debug;
 
 use crate::ai::Decision;
 
+/// Represents a single constraint where the variables represent tiles that are
+/// still unknown to some degree, and the label represents the value that the
+/// variables need to add up to.
+///
+/// In concrete terms, variables are hidden unflagged cells and the label is how many
+/// mines are still undiscovered in said cells.
 #[derive(Clone)]
 pub struct Constraint<const W: usize, const H: usize> {
+    /// Value or label for the variables
     label: u8,
+    /// List of coordinates to represent the variables that add up to the label.
     variables: Vec<Coord<W, H>>,
 }
 
@@ -24,14 +34,14 @@ impl<const W: usize, const H: usize> Debug for Constraint<W, H> {
     }
 }
 
+/// Custom error type for any failure states that might occur.
 #[derive(Debug)]
-pub enum CSPError {
-    NoTrivialCases,
-}
+pub enum CSPError {}
 
 /// General state used for solving Constraint Satisfication Problem
 #[derive(Debug, Clone)]
 pub struct ConstaintSatisficationState<const W: usize, const H: usize> {
+    /// List of label-mine-location-constraints for a given state
     constraints: Vec<Constraint<W, H>>,
 }
 

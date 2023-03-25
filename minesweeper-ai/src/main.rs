@@ -16,10 +16,14 @@ use miinaharava::{
 mod ai;
 mod csp;
 
+/// Represents a difficulty level
 #[derive(Clone, Copy, Debug)]
 enum Difficulty {
+    /// 10x10 field with 10 mines
     Easy,
+    /// 16x16 field with 40 mines
     Intermediate,
+    /// 30x16 field with 99 mines
     Expert,
 }
 
@@ -73,24 +77,18 @@ fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Opti
         }
 
         // AI decision making here
-        if minefield.game_state() == GameState::Pending {
-            let start = Instant::now();
-            while minefield.game_state() == GameState::Pending {
-                let decisions = ponder(&minefield);
-                if decisions.is_empty() {
-                    break;
-                }
-                dbg!(&decisions);
-                for decision in decisions {
-                    if minefield.game_state() == GameState::Pending {
-                        match decision {
-                            Decision::Reveal(coord) => minefield.reveal(coord).unwrap(),
-                            Decision::Flag(coord) => minefield.flag(coord).unwrap(),
-                        };
-                    }
+        let now = Instant::now();
+        if (now - last_move).as_secs_f32() > 1. && minefield.game_state() == GameState::Pending {
+            last_move = now;
+            let decisions = ponder(&minefield);
+            for decision in decisions {
+                if minefield.game_state() == GameState::Pending {
+                    match decision {
+                        Decision::Reveal(coord) => minefield.reveal(coord).unwrap(),
+                        Decision::Flag(coord) => minefield.flag(coord).unwrap(),
+                    };
                 }
             }
-            println!("{:?}", Instant::now() - start);
         }
 
         game.timer_paused = minefield.game_state() != GameState::Pending;
