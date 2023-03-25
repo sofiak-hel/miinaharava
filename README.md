@@ -8,6 +8,13 @@ This repository contains two Rust projects:
   - [miinaharava](./miinaharava/), a minesweeper implementation written in Rust, contains both a human-playable binary and a `lib.rs` in order to expose it for an AI to use.  
   - [minesweeper-ai](./minesweeper-ai/), an AI that will attempt to play minesweeper using the aforementioned minesweeper implementation. **This project is the relevant project for Tiralabra**, but the other one contains some tests and code coverage as well.
 
+## Documents
+- [Project specification document](./documentation/projectspecification.md)
+
+## Weekly reports
+1. [Report 1](./weeklyreports/weeklyreport1.md)
+2. [Report 2](./weeklyreports/weeklyreport2.md)
+
 ## Building and running manually
 For this you need at least Cargo/Rust version `1.68.1`. Recommended way to
 install and update rust is using [rustup](https://rustup.rs/).
@@ -26,9 +33,3 @@ To get coverage in the terminal:
 Both here and in codecov.io the three files in the above flag are excluded
 because they are highly related to rendering and user input, difficult to test
 and mostly irrelevant to this project and therefore intentionally not tested.
-
-## Documents
-- [Project specification document](./documentation/projectspecification.md)
-
-## Weekly reports
-1. [Report 1](./weeklyreports/weeklyreport1.md)
