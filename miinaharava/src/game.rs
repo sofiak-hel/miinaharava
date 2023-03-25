@@ -155,23 +155,12 @@ impl<'a> Game<'a> {
         self.append_text(format!("{}, {}\n", W, H), None, None);
         self.append_text(format!("{} mines\n", minefield.mines), None, None);
         self.append_text(format!("{:.1}\n", self.timer), None, None);
-        let text_style = match minefield.game_state() {
-            GameState::GameOver => Some(TextStyle::with_user_data(
-                "Game over!",
-                32.0,
-                0,
-                Color::RGB(0xFF, 0, 0),
-            )),
-            GameState::Victory => Some(TextStyle::with_user_data(
-                "Victory!",
-                32.0,
-                0,
-                Color::RGB(0, 0xFF, 0),
-            )),
-            GameState::Pending => None,
-        };
-        if let Some(text_style) = text_style {
-            self.layout.append(&self.fonts, &text_style);
+        match minefield.game_state() {
+            GameState::GameOver => {
+                self.append_text("Game over!", None, Some(Color::RGB(0xFF, 0, 0)));
+            }
+            GameState::Victory => self.append_text("Victory!", None, Some(Color::RGB(0, 0xFF, 0))),
+            _ => {}
         }
 
         let _ = self

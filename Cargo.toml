@@ -1,13 +1,5 @@
-[package]
-name = "miinaharava"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-sdl2 = { version = "0.35.2", features = ["bundled", "static-link"] }
-arrayvec = "0.7.2"
-rand = "0.8.5"
-fontdue-sdl2 = "0.2.0"
-fontdue = "0.7.2"
+[workspace]
+members = [
+    "miinaharava",
+    "minesweeper-ai"
+]

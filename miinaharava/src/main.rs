@@ -1,7 +1,7 @@
 //! hello
 
 #![deny(clippy::all)]
-#![allow(missing_docs)]
+#![warn(missing_docs)]
 
 use game::GameWindow;
 use minefield::Minefield;
@@ -48,7 +48,7 @@ fn start_game(game: &mut Game, difficulty: Difficulty) -> Option<Difficulty> {
     }
 }
 
-pub fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Option<Difficulty> {
+fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Option<Difficulty> {
     let mut mouse_pressed = false;
     let mut minefield = Minefield::<W, H>::generate(mines);
     let mut next_difficulty = None;
@@ -58,23 +58,13 @@ pub fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> 
             let next_diff = match event {
                 Event::MouseButtonUp {
                     mouse_btn, x, y, ..
-                } => {
-                    if minefield.game_state() == GameState::Pending {
-                        mouse_pressed = false;
-                        match mouse_btn {
-                            MouseButton::Left => {
-                                if let Some(coord) = game.get_coord((x, y)) {
-                                    minefield.reveal(coord).unwrap();
-                                }
-                            }
-                            MouseButton::Right => {
-                                if let Some(coord) = game.get_coord((x, y)) {
-                                    minefield.flag(coord).unwrap();
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
+                } if minefield.game_state() == GameState::Pending => {
+                    mouse_pressed = false;
+                    match (mouse_btn, game.get_coord((x, y))) {
+                        (MouseButton::Left, Some(coord)) => minefield.reveal(coord).unwrap(),
+                        (MouseButton::Right, Some(coord)) => minefield.flag(coord).unwrap(),
+                        _ => {}
+                    };
                     None
                 }
                 Event::KeyDown {
