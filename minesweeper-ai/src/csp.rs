@@ -1,6 +1,7 @@
 //! This module contains everything related to specifically solving the
 //! Constraint Satisfaction Problem.
 
+use arrayvec::ArrayVec;
 use miinaharava::minefield::{Cell, Coord, Minefield};
 use std::fmt::Debug;
 
@@ -12,12 +13,12 @@ use crate::ai::Decision;
 ///
 /// In concrete terms, variables are hidden unflagged cells and the label is how many
 /// mines are still undiscovered in said cells.
-#[derive(Clone)]
+#[derive(Clone, PartialOrd, Ord, Eq)]
 pub struct Constraint<const W: usize, const H: usize> {
     /// Value or label for the variables
-    label: u8,
+    pub label: u8,
     /// List of coordinates to represent the variables that add up to the label.
-    variables: Vec<Coord<W, H>>,
+    pub variables: ArrayVec<Coord<W, H>, 8>,
 }
 
 impl<const W: usize, const H: usize> Debug for Constraint<W, H> {
@@ -34,15 +35,25 @@ impl<const W: usize, const H: usize> Debug for Constraint<W, H> {
     }
 }
 
+impl<const W: usize, const H: usize> PartialEq for Constraint<W, H> {
+    fn eq(&self, other: &Self) -> bool {
+        let mut a = self.variables.clone();
+        let mut b = other.variables.clone();
+        a.sort();
+        b.sort();
+        a == b && self.label == other.label
+    }
+}
+
 /// Custom error type for any failure states that might occur.
 #[derive(Debug)]
 pub enum CSPError {}
 
 /// General state used for solving Constraint Satisfication Problem
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ConstaintSatisficationState<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
-    constraints: Vec<Constraint<W, H>>,
+    pub constraints: Vec<Constraint<W, H>>,
 }
 
 impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
@@ -54,7 +65,7 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
         for (y, row) in minefield.field.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
                 if let Cell::Label(mut num) = cell {
-                    let mut neighbors = Vec::new();
+                    let mut neighbors = ArrayVec::new();
                     for neighbor in Coord::<W, H>(x, y).neighbours() {
                         match minefield.field[neighbor.1][neighbor.0] {
                             Cell::Flag => num -= 1,

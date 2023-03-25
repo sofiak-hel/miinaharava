@@ -113,6 +113,20 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
             })
         }
     }
+    /// Generate a new minefield with the provided amount of mines.
+    ///
+    /// # Errors
+    /// - [MinefieldError::TooManyMines] if the amount of mines is too large.
+    pub fn with_mines(mines: [[bool; W]; H]) -> Self {
+        Minefield {
+            mine_indices: mines,
+            field: [[Cell::Hidden; W]; H],
+            mines: mines
+                .iter()
+                .map(|row| row.iter().filter(|i| **i).count() as u8)
+                .sum(),
+        }
+    }
 
     /// Returns the current state of the game.
     pub fn game_state(&self) -> GameState {

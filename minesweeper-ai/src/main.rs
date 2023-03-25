@@ -9,12 +9,15 @@ use std::time::Instant;
 use ai::{ponder, Decision};
 use miinaharava::{
     game::{Game, GameWindow},
-    minefield::{GameState, Minefield},
+    minefield::{Coord, GameState, Minefield},
     sdl2::{event::Event, keyboard::Keycode},
 };
 
 mod ai;
 mod csp;
+
+#[cfg(test)]
+mod tests;
 
 /// Represents a difficulty level
 #[derive(Clone, Copy, Debug)]

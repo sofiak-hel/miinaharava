@@ -65,15 +65,13 @@ fn test_game_state() {
 fn test_automatic_recursive_reveal() {
     use Cell::*;
 
-    let mut minefield = Minefield::<5, 5>::generate(4).unwrap();
-    let indices = minefield.get_mine_indices();
-    *indices = [
+    let mut minefield = Minefield::<5, 5>::with_mines([
         [false, false, false, false, false],
         [false, false, false, true, true],
         [false, false, false, false, false],
         [false, false, false, false, true],
         [false, false, false, false, true],
-    ];
+    ]);
 
     minefield.reveal(Coord(1, 1)).unwrap();
 
@@ -156,6 +154,12 @@ fn test_reveal_and_flag_errors() {
         minefield.flag(Coord::random()),
         Err(MinefieldError::GameHasEnded)
     );
+}
+
+#[test]
+fn test_recursive_reveal_wont_panic() {
+    let mut minefield = Minefield::<10, 10>::with_mines([[false; 10]; 10]);
+    minefield.reveal(Coord(5, 5)).unwrap();
 }
 
 fn find_cell<const W: usize, const H: usize>(
