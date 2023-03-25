@@ -7,21 +7,16 @@ use miinaharava::{
     game::{Game, GameWindow},
     minefield::{GameState, Minefield},
 };
-use sdl2::{
-    event::Event,
-    keyboard::Keycode,
-    mouse::{self, MouseButton},
-};
+use sdl2::{event::Event, keyboard::Keycode, mouse::MouseButton};
 
 #[derive(Clone, Copy, Debug)]
-pub enum Difficulty {
+enum Difficulty {
     Easy,
     Intermediate,
     Expert,
 }
 
-/// main docs
-pub fn main() {
+fn main() {
     let mut window = GameWindow::start();
     let mut game = Game::init(&mut window);
 

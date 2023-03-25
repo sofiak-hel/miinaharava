@@ -2,15 +2,19 @@
 
 #![deny(clippy::all)]
 #![warn(missing_docs)]
+#![warn(clippy::missing_docs_in_private_items)]
 
+use ai::{ponder, Decision};
 use miinaharava::{
     game::{Game, GameWindow},
     minefield::{GameState, Minefield},
-    sdl2::{event::Event, keyboard::Keycode, mouse::MouseButton},
+    sdl2::{event::Event, keyboard::Keycode},
 };
 
+mod ai;
+
 #[derive(Clone, Copy, Debug)]
-pub enum Difficulty {
+enum Difficulty {
     Easy,
     Intermediate,
     Expert,
@@ -42,7 +46,7 @@ fn start_game(game: &mut Game, difficulty: Difficulty) -> Option<Difficulty> {
 }
 
 fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Option<Difficulty> {
-    let minefield = Minefield::<W, H>::generate(mines);
+    let mut minefield = Minefield::<W, H>::generate(mines);
     let mut next_difficulty = None;
 
     while let (Some(events), None) = (game.update(), next_difficulty) {
@@ -61,6 +65,16 @@ fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Opti
             };
             next_difficulty = next_diff.or(next_difficulty);
         }
+
+        // AI decision making here
+        let decisions = ponder(&minefield);
+        for decision in decisions {
+            match decision {
+                Decision::Reveal(coord) => minefield.reveal(coord).unwrap(),
+                Decision::Flag(coord) => minefield.flag(coord).unwrap(),
+            };
+        }
+
         game.timer_paused = minefield.game_state() != GameState::Pending;
         game.draw(&minefield, None);
     }
