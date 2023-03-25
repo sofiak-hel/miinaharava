@@ -1,7 +1,4 @@
-//! hello
-
 #![deny(clippy::all)]
-#![warn(missing_docs)]
 
 use miinaharava::{
     game::{Game, GameWindow},
@@ -42,7 +39,7 @@ fn start_game(game: &mut Game, difficulty: Difficulty) -> Option<Difficulty> {
 
 fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Option<Difficulty> {
     let mut mouse_pressed = false;
-    let mut minefield = Minefield::<W, H>::generate(mines);
+    let mut minefield = Minefield::<W, H>::generate(mines).unwrap();
     let mut next_difficulty = None;
 
     while let (Some(events), None) = (game.update(), next_difficulty) {

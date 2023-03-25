@@ -1,9 +1,17 @@
+//! Contains the mechanical part for Minesweeper ([Minefield]), contains nothing related for
+//! drawing and is entirely sufficient in of itself if a simple abstract
+//! representation is only needed.
+
 use arrayvec::ArrayVec;
 
+/// Represents a tile coordinate on the minefield.
 #[derive(PartialEq, Eq, Debug)]
 pub struct Coord<const W: usize, const H: usize>(pub usize, pub usize);
 
 impl<const W: usize, const H: usize> Coord<W, H> {
+    /// Returns all possible 8 neighboring coordinates for the given coordinate.
+    /// Does not return impossible coordinates, such as below 0 or above
+    /// minefield limits.
     pub fn neighbours(&self) -> ArrayVec<Coord<W, H>, 8> {
         let mut list = ArrayVec::new();
         for y in -1..=1 {
@@ -18,57 +26,87 @@ impl<const W: usize, const H: usize> Coord<W, H> {
         list
     }
 
+    /// Returns a random valid coordinate
     pub fn random() -> Coord<W, H> {
         Coord(rand::random::<usize>() % W, rand::random::<usize>() % H)
     }
 }
 
+/// Custom error for minefields
 #[derive(Debug)]
 pub enum MinefieldError {
+    /// Coordinate was invalid
     InvalidCoordinate,
+    /// Can not have this many mines on a minefield this size.
+    TooManyMines,
+    /// Game already ended, unable to performa any actions.
+    GameHasEnded,
 }
 
+/// Represents a cell on the "visible" board.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Cell {
+    /// Empty cell, does not contain a mine and does not have a mine in neighboring tiles.
     Empty,
+    /// Has a mine in a neighboring tile, number will tell how many mines.
     Label(u8),
+    /// Hidden tile but flagged as a suspected mine.
     Flag,
+    /// Hidden tile.
     Hidden,
+    /// Revealed to be a mine, having one in the board always results in a
+    /// failed game state.
     Mine,
 }
 
+/// Represents the state of the game currently
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum GameState {
+    /// The game has been won, all non-mines have been revealed.
     Victory,
+    /// A mine has been revealed, the game is lost.
     GameOver,
+    /// The game still pending; not yet won or lost.
     Pending,
 }
 
+/// Represents a mechanical abstract minefield in minesweeper
 #[derive(Clone, Debug)]
 pub struct Minefield<const W: usize, const H: usize> {
     mine_indices: [[bool; W]; H],
+    /// The visible field
     pub field: [[Cell; W]; H],
+    /// How many mines are in the field.
     pub mines: u8,
 }
 
 impl<const W: usize, const H: usize> Minefield<W, H> {
-    pub fn generate(mines: u8) -> Self {
+    /// Generate a new minefield with the provided amount of mines.
+    ///
+    /// # Errors
+    /// - [MinefieldError::TooManyMines] if the amount of mines is too large.
+    pub fn generate(mines: u8) -> Result<Self, MinefieldError> {
         let mut mine_indices = [[false; W]; H];
-        for _ in 0..mines {
-            let mut coord = Coord::<W, H>::random();
-            while mine_indices[coord.1][coord.0] {
-                coord = Coord::random();
+        if mines as usize > W * H {
+            Err(MinefieldError::TooManyMines)
+        } else {
+            for _ in 0..mines {
+                let mut coord = Coord::<W, H>::random();
+                while mine_indices[coord.1][coord.0] {
+                    coord = Coord::random();
+                }
+                mine_indices[coord.1][coord.0] = true;
             }
-            mine_indices[coord.1][coord.0] = true;
-        }
 
-        Minefield {
-            mine_indices,
-            field: [[Cell::Hidden; W]; H],
-            mines,
+            Ok(Minefield {
+                mine_indices,
+                field: [[Cell::Hidden; W]; H],
+                mines,
+            })
         }
     }
 
+    /// Returns the current state of the game.
     pub fn game_state(&self) -> GameState {
         if self.field.into_iter().flatten().any(|c| c == Cell::Mine) {
             GameState::GameOver
@@ -85,8 +123,15 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
         }
     }
 
+    /// Attempts to reveal a tile.
+    ///
+    /// # Errors
+    /// - [MinefieldError::GameHasEnded] if the game is already over
+    /// - [MinefieldError::InvalidCoordinate] if the attempted coordinate was not valid.
     pub fn reveal(&mut self, coord: Coord<W, H>) -> Result<(), MinefieldError> {
-        if coord.0 >= W || coord.1 >= H {
+        if self.game_state() != GameState::Pending {
+            Err(MinefieldError::GameHasEnded)
+        } else if coord.0 >= W || coord.1 >= H {
             Err(MinefieldError::InvalidCoordinate)
         } else {
             let field_cell = self.field[coord.1][coord.0];
@@ -103,8 +148,15 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
         }
     }
 
+    /// Attempts to flag a tile.
+    ///
+    /// # Errors
+    /// - [MinefieldError::GameHasEnded] if the game is already over
+    /// - [MinefieldError::InvalidCoordinate] if the attempted coordinate was not valid.
     pub fn flag(&mut self, coord: Coord<W, H>) -> Result<(), MinefieldError> {
-        if coord.0 >= W || coord.1 >= H {
+        if self.game_state() != GameState::Pending {
+            Err(MinefieldError::GameHasEnded)
+        } else if coord.0 >= W || coord.1 >= H {
             Err(MinefieldError::InvalidCoordinate)
         } else {
             self.field[coord.1][coord.0] = match self.field[coord.1][coord.0] {
