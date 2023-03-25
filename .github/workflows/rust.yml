@@ -61,7 +61,8 @@ jobs:
           apt-get install -y cmake
       - name:                   Generate code coverage
         run: |
-          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
+          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml \
+          --exclude-files='miinaharava/src/minefield_renderer.rs,miinaharava/src/game.rs,miinaharava/src/main.rs'
       - name:                   Upload to codecov.io
         uses:                   codecov/codecov-action@v2
         with:
