@@ -87,7 +87,7 @@ fn test_constraint_generation() {
     let mut minefield = Minefield::<7, 7>::with_mines(TRIVIAL_MINES);
     minefield.reveal(Coord(0, 0)).unwrap();
 
-    let mut state = ConstaintSatisficationState::from(&minefield);
+    let state = ConstaintSatisficationState::from(&minefield);
     let mut expected: Vec<Constraint<7, 7>> = vec![
         Constraint {
             label: 1,

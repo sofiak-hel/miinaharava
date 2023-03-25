@@ -9,7 +9,7 @@ use std::time::Instant;
 use ai::{ponder, Decision};
 use miinaharava::{
     game::{Game, GameWindow},
-    minefield::{Coord, GameState, Minefield},
+    minefield::{GameState, Minefield},
     sdl2::{event::Event, keyboard::Keycode},
 };
 
