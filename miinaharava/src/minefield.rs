@@ -5,7 +5,7 @@
 use arrayvec::ArrayVec;
 
 /// Represents a tile coordinate on the minefield.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Coord<const W: usize, const H: usize>(pub usize, pub usize);
 
 impl<const W: usize, const H: usize> Coord<W, H> {
@@ -33,7 +33,7 @@ impl<const W: usize, const H: usize> Coord<W, H> {
 }
 
 /// Custom error for minefields
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum MinefieldError {
     /// Coordinate was invalid
     InvalidCoordinate,
@@ -71,7 +71,7 @@ pub enum GameState {
 }
 
 /// Represents a mechanical abstract minefield in minesweeper
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Minefield<const W: usize, const H: usize> {
     mine_indices: [[bool; W]; H],
     /// The visible field
@@ -187,5 +187,12 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
 
     fn is_mine(&self, coord: &Coord<W, H>) -> bool {
         self.mine_indices[coord.1][coord.0]
+    }
+}
+
+#[cfg(test)]
+impl<const W: usize, const H: usize> Minefield<W, H> {
+    pub fn get_mine_indices(&mut self) -> &mut [[bool; W]; H] {
+        &mut self.mine_indices
     }
 }

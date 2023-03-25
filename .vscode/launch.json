@@ -30,12 +30,11 @@
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=miinaharava",
                     "--package=miinaharava"
                 ],
                 "filter": {
                     "name": "miinaharava",
-                    "kind": "bin"
+                    "kind": "lib"
                 }
             },
             "args": [],
