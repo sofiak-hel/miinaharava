@@ -1,4 +1,4 @@
-use crate::minefield::{self, Cell, Coord, GameState, Minefield, MinefieldError};
+use crate::minefield::{Cell, Coord, GameState, Minefield, MinefieldError};
 
 #[test]
 fn test_generation() {
