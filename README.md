@@ -10,10 +10,12 @@ This repository contains two Rust projects:
 
 ## Documents
 - [Project specification document](./documentation/projectspecification.md)
+- [Testing document](./documentation/testingdocument.md.md)
 
 ## Weekly reports
 1. [Report 1](./weeklyreports/weeklyreport1.md)
 2. [Report 2](./weeklyreports/weeklyreport2.md)
+2. [Report 2](./weeklyreports/weeklyreport3.md)
 
 ## Performance and benchmarking
 To do performance and benchmark-testing, you can run `minesweeper-ai` in
