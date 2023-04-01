@@ -214,7 +214,7 @@ fn start_with_window(difficulty: Difficulty) {
 /// Commandline arguments that are accepted
 #[derive(FromArgs)]
 struct CommandLineArguments {
-    /// whether or not to jump
+    /// run headlessly, more performant but no visuals
     #[argh(switch, short = 'h')]
     headless: bool,
 
@@ -226,7 +226,7 @@ struct CommandLineArguments {
     #[argh(option)]
     games: Option<u32>,
 
-    /// number of seconds to play games (overrides games, does not apply on windowed-mode)
+    /// number of seconds to play games (if used with games, first one to finish halts program)
     #[argh(option)]
     seconds: Option<u32>,
 }
