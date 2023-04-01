@@ -15,6 +15,22 @@ This repository contains two Rust projects:
 1. [Report 1](./weeklyreports/weeklyreport1.md)
 2. [Report 2](./weeklyreports/weeklyreport2.md)
 
+## Performance and benchmarking
+To do performance and benchmark-testing, you can run `minesweeper-ai` in
+headless-mode, which will give accurate statistics for specifically how much
+time was spent ie. running AI.
+
+Alternatively you can run `cargo bench` which will run a few different
+benchmarks for each difficulty:
+- How long does it take to generate a minefield, and solve it (including time
+  spent revealing)
+- How long does it take to simply generate the minefield
+- How long does it to reveal a mine field and then reveal a random coordinate
+
+`cargo bench` is technically most likely more accurate, but since there is no
+specific benchmark for how long only the revealing takes or how long is only
+spent running AI, it is not optimal for all use cases.
+
 ## Building and running manually
 For this you need at least Cargo/Rust version `1.68.1`. Recommended way to
 install and update rust is using [rustup](https://rustup.rs/).
