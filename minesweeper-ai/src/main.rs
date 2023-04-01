@@ -10,7 +10,7 @@ use miinaharava::{
     game::{Game, GameWindow},
     sdl2::{event::Event, keyboard::Keycode},
 };
-use thread_controller::{Difficulty, State, StateStats, StateWrapper, ThreadController};
+use thread_controller::{Difficulty, StateStats, StateWrapper, ThreadController};
 
 mod ai;
 mod csp;
@@ -34,11 +34,7 @@ struct VisualState<'a> {
 impl<'a> VisualState<'a> {
     /// Reset the current state with the specified difficulty.
     pub fn reset_with_difficulty(&mut self, difficulty: Difficulty) {
-        *self.controller.state.lock().unwrap() = match difficulty {
-            Difficulty::Easy => StateWrapper::Easy(State::new(10)),
-            Difficulty::Intermediate => StateWrapper::Intermediate(State::new(40)),
-            Difficulty::Expert => StateWrapper::Expert(State::new(99)),
-        };
+        *self.controller.state.lock().unwrap() = StateWrapper::from(difficulty);
         self.game.timer = 0.;
     }
 
@@ -115,7 +111,7 @@ fn main() {
     game.timer = 0.;
     game.timer_paused = false;
     let mut state = VisualState {
-        controller: ThreadController::start(StateWrapper::Easy(State::new(10)), game.timer_paused),
+        controller: ThreadController::start(Difficulty::Easy.into(), game.timer_paused),
         delay: Duration::from_millis(25),
         game,
     };

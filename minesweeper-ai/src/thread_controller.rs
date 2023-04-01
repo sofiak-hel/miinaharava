@@ -148,6 +148,16 @@ impl StateWrapper {
     }
 }
 
+impl From<Difficulty> for StateWrapper {
+    fn from(value: Difficulty) -> Self {
+        match value {
+            Difficulty::Easy => StateWrapper::Easy(State::new(10)),
+            Difficulty::Intermediate => StateWrapper::Intermediate(State::new(40)),
+            Difficulty::Expert => StateWrapper::Expert(State::new(99)),
+        }
+    }
+}
+
 /// State of the current set of games being played by the AI. This struct is
 /// reset every time difficulty changes (or the game is otherwise reset).
 #[derive(Clone)]
