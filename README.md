@@ -17,23 +17,21 @@ This repository contains two Rust projects:
 2. [Report 2](./weeklyreports/weeklyreport2.md)
 2. [Report 3](./weeklyreports/weeklyreport3.md)
 
-## Performance and benchmarking
-To do performance and benchmark-testing, you can run `minesweeper-ai` in
-headless-mode, which will give accurate statistics for specifically how much
-time was spent ie. running AI.
+## Running
+Ready built binaries for Linux and Windows can be found on Releases if any
+exist, and if you like to live on the edge, also every successful commit has
+build artifacts on GitHub which should stay there for around a week. 
 
-Alternatively you can run `cargo bench` which will run a few different
-benchmarks for each difficulty:
-- How long does it take to generate a minefield, and solve it (including time
-  spent revealing)
-- How long does it take to simply generate the minefield
-- How long does it to reveal a mine field and then reveal a random coordinate
+Example link to a successful (probably very old!) build summary, which had
+artifacts at the time of writing:
+https://github.com/sofiak-hel/minesweeper/actions/runs/4585211015#artifacts
 
-`cargo bench` is technically most likely more accurate, but since there is no
-specific benchmark for how long only the revealing takes or how long is only
-spent running AI, it is not optimal for all use cases.
+Running the ready built binaries as easy as:
+- `./miinaharava` for the human-playable game
+- `./minesweeper-ai` for the graphically appealing ai-version
+- `./minesweeper-ai --headless` for the headless performance-specific ai-version
 
-## Building and running manually
+### Building (and running) manually
 For this you need at least Cargo/Rust version `1.68.1`. Recommended way to
 install and update rust is using [rustup](https://rustup.rs/).
 
@@ -95,7 +93,26 @@ Headless version also has optional arguments for
 
 Use `--help` for more detail.
 
-## Testing and coverage
+## Performance and testing
+
+### Performance and benchmarking
+To do performance and benchmark-testing, you can run `minesweeper-ai` in
+headless-mode, which will give accurate statistics for specifically how much
+time was spent ie. running AI.
+
+Alternatively you can run `cargo bench` which will run a few different
+benchmarks for each difficulty:
+- How long does it take to generate a minefield, and solve it (including time
+  spent revealing)
+- How long does it take to simply generate the minefield
+- How long does it to reveal a mine field and then reveal a random coordinate
+
+`cargo bench` is technically most likely more accurate, but since there is no
+specific benchmark for how long only the revealing takes or how long is only
+spent running AI, it is not optimal for all use cases.
+
+
+### Testing and coverage
 Testing can be run simply by running `cargo test` in the root folder of this
 repository.  
 To get coverage in the terminal:

@@ -22,19 +22,19 @@ jobs:
     - name: Post-process
       run: |
         strip target/release/miinaharava
-        mv target/release/miinaharava miinaharava
+        mv target/release/miinaharava miinaharava-bin
         strip target/release/minesweeper-ai
-        mv target/release/minesweeper-ai minesweeper-ai
+        mv target/release/minesweeper-ai minesweeper-ai-bin
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
         name: miinaharava-linux
-        path: miinaharava
+        path: miinaharava-bin
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
         name: minesweeper-ai-linux
-        path: minesweeper-ai
+        path: minesweeper-ai-bin
 
   build-windows:
     runs-on: windows-latest

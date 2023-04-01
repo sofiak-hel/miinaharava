@@ -51,6 +51,22 @@ been excluded from code-coverage because they are mostly scaffolding-code and
 code related directly to rendering thus difficult to test and somewhat
 irrelevant to the project as a whole.
 
+## Performance and benchmarking
+To do performance and benchmark-testing, you can run `minesweeper-ai` in
+headless-mode, which will give accurate statistics for specifically how much
+time was spent ie. running AI.
+
+Alternatively you can run `cargo bench` which will run a few different
+benchmarks for each difficulty:
+- How long does it take to generate a minefield, and solve it (including time
+  spent revealing)
+- How long does it take to simply generate the minefield
+- How long does it to reveal a mine field and then reveal a random coordinate
+
+`cargo bench` is technically most likely more accurate, but since there is no
+specific benchmark for how long only the revealing takes or how long is only
+spent running AI, it is not optimal for all use cases.
+
 
 ## Running tests and coverage manually
 Testing can be run simply by running `cargo test` in the root folder of this
