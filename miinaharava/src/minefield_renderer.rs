@@ -44,11 +44,9 @@ impl<'a> MinefieldRenderer<'a> {
                     w,
                     h,
                 );
-                let hover = hover_tile
-                    .as_ref()
-                    .map(|h| h == &Coord::<W, H>(x, y))
-                    .unwrap_or(false);
-                let source_rect = Rect::from(source(minefield.field[y][x], hover));
+                let coord = Coord::<W, H>(x, y);
+                let hover = hover_tile.as_ref().map(|h| h == &coord).unwrap_or(false);
+                let source_rect = Rect::from(source(minefield.field.get(coord), hover));
                 canvas.copy(&self.atlas, source_rect, dest_rect).unwrap();
             }
         }

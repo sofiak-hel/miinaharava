@@ -81,15 +81,15 @@ fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Opti
 
         // AI decision making here
         let now = Instant::now();
-        if (now - last_move).as_secs_f32() > 1. && minefield.game_state() == GameState::Pending {
+        if (now - last_move).as_secs_f32() > 1. {
             last_move = now;
-            let decisions = ponder(&minefield);
-            for decision in decisions {
-                if minefield.game_state() == GameState::Pending {
+            if let Some(decisions) = ponder(&minefield) {
+                for decision in decisions {
                     match decision {
-                        Decision::Reveal(coord) => minefield.reveal(coord).unwrap(),
-                        Decision::Flag(coord) => minefield.flag(coord).unwrap(),
-                    };
+                        Decision::Reveal(coord) => minefield.reveal(coord),
+                        Decision::Flag(coord) => minefield.flag(coord),
+                    }
+                    .ok();
                 }
             }
         }

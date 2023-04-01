@@ -67,7 +67,7 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
                 if let Cell::Label(mut num) = cell {
                     let mut neighbors = ArrayVec::new();
                     for neighbor in Coord::<W, H>(x, y).neighbours() {
-                        match minefield.field[neighbor.1][neighbor.0] {
+                        match minefield.field.get(neighbor) {
                             Cell::Flag => num -= 1,
                             Cell::Hidden => neighbors.push(neighbor),
                             _ => {}

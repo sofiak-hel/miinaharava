@@ -1,14 +1,14 @@
 use std::hint::black_box;
 
 use arrayvec::ArrayVec;
-use miinaharava::minefield::{Coord, GameState, Minefield};
+use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
 
 use crate::{
     ai::{ponder, Decision},
     csp::{ConstaintSatisficationState, Constraint},
 };
 
-const TRIVIAL_MINES: [[bool; 7]; 7] = [
+const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
     [false, false, false, false, false, false, false],
     [false, false, false, false, false, false, false],
     [false, false, false, false, false, true, false],
@@ -16,7 +16,7 @@ const TRIVIAL_MINES: [[bool; 7]; 7] = [
     [false, false, false, false, false, false, false],
     [false, false, false, false, false, false, true],
     [false, true, false, true, false, false, false],
-];
+]);
 
 #[test]
 fn solve_trivial_field() {
@@ -26,13 +26,14 @@ fn solve_trivial_field() {
 
     let mut max_decisions = 20;
     while minefield.game_state() == GameState::Pending && max_decisions > 0 {
-        let decisions = ponder(&minefield);
-        for decision in decisions {
-            match decision {
-                Decision::Flag(coord) => minefield.flag(coord),
-                Decision::Reveal(coord) => minefield.reveal(coord),
+        if let Some(decisions) = ponder(&minefield) {
+            for decision in decisions {
+                match decision {
+                    Decision::Flag(coord) => minefield.flag(coord),
+                    Decision::Reveal(coord) => minefield.reveal(coord),
+                }
+                .unwrap();
             }
-            .unwrap();
         }
         max_decisions -= 1;
     }
@@ -43,7 +44,7 @@ fn solve_trivial_field() {
 fn first_ponder_is_a_corner() {
     for _ in 0..100 {
         let minefield = Minefield::<10, 10>::generate(10).unwrap();
-        let decisions = ponder(&minefield);
+        let decisions = ponder(&minefield).unwrap();
         let decision = decisions.get(0).unwrap();
         assert!(matches!(decision, Decision::Reveal(Coord(0 | 9, 0 | 9))));
     }

@@ -78,12 +78,41 @@ pub enum GameState {
     Pending,
 }
 
+/// Generic struct for a 2D matrix of type T
+#[derive(Debug, PartialEq, Clone, Eq, Copy)]
+pub struct Matrix<T: Copy, const W: usize, const H: usize>(pub [[T; W]; H]);
+
+impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
+    /// Get element in position of Coord from the matrix
+    pub fn get(&self, coord: Coord<W, H>) -> T {
+        self.0[coord.1][coord.0]
+    }
+
+    /// Set element in position of Coord from the matrix
+    pub fn set(&mut self, coord: Coord<W, H>, item: T) {
+        self.0[coord.1][coord.0] = item;
+    }
+
+    /// Return an iterator for the rows
+    pub fn iter(&self) -> impl Iterator<Item = &[T; W]> {
+        self.0.iter()
+    }
+}
+
+impl<T: Copy, const W: usize, const H: usize> IntoIterator for Matrix<T, W, H> {
+    type Item = [T; W];
+    type IntoIter = std::array::IntoIter<Self::Item, H>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 /// Represents a mechanical abstract minefield in minesweeper
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Minefield<const W: usize, const H: usize> {
-    mine_indices: [[bool; W]; H],
+    mine_indices: Matrix<bool, W, H>,
     /// The visible field
-    pub field: [[Cell; W]; H],
+    pub field: Matrix<Cell, W, H>,
     /// How many mines are in the field.
     pub mines: u8,
 }
@@ -107,8 +136,8 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
             }
 
             Ok(Minefield {
-                mine_indices,
-                field: [[Cell::Hidden; W]; H],
+                mine_indices: Matrix(mine_indices),
+                field: Matrix([[Cell::Hidden; W]; H]),
                 mines,
             })
         }
@@ -117,12 +146,12 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
     ///
     /// # Errors
     /// - [MinefieldError::TooManyMines] if the amount of mines is too large.
-    pub fn with_mines(mines: [[bool; W]; H]) -> Self {
+    pub fn with_mines(mines: Matrix<bool, W, H>) -> Self {
         Minefield {
             mine_indices: mines,
-            field: [[Cell::Hidden; W]; H],
+            field: Matrix([[Cell::Hidden; W]; H]),
             mines: mines
-                .iter()
+                .into_iter()
                 .map(|row| row.iter().filter(|i| **i).count() as u8)
                 .sum(),
         }
@@ -156,10 +185,10 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
         } else if coord.0 >= W || coord.1 >= H {
             Err(MinefieldError::InvalidCoordinate)
         } else {
-            let field_cell = self.field[coord.1][coord.0];
+            let field_cell = self.field.get(coord);
             if field_cell == Cell::Flag || field_cell == Cell::Hidden {
-                let cell = self.cell_contents(&coord);
-                self.field[coord.1][coord.0] = cell;
+                let cell = self.cell_contents(coord);
+                self.field.set(coord, cell);
                 if cell == Cell::Empty {
                     for neighbor in coord.neighbours() {
                         match self.reveal(neighbor) {
@@ -184,23 +213,26 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
         } else if coord.0 >= W || coord.1 >= H {
             Err(MinefieldError::InvalidCoordinate)
         } else {
-            self.field[coord.1][coord.0] = match self.field[coord.1][coord.0] {
-                Cell::Flag => Cell::Hidden,
-                Cell::Hidden => Cell::Flag,
-                c => c,
-            };
+            self.field.set(
+                coord,
+                match self.field.get(coord) {
+                    Cell::Flag => Cell::Hidden,
+                    Cell::Hidden => Cell::Flag,
+                    c => c,
+                },
+            );
             Ok(())
         }
     }
 
-    fn cell_contents(&self, coord: &Coord<W, H>) -> Cell {
+    fn cell_contents(&self, coord: Coord<W, H>) -> Cell {
         if self.is_mine(coord) {
             Cell::Mine
         } else {
             let mines = coord
                 .neighbours()
                 .iter()
-                .filter(|c| self.is_mine(c))
+                .filter(|c| self.is_mine(**c))
                 .count() as u8;
             if mines == 0 {
                 Cell::Empty
@@ -210,14 +242,14 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
         }
     }
 
-    fn is_mine(&self, coord: &Coord<W, H>) -> bool {
-        self.mine_indices[coord.1][coord.0]
+    fn is_mine(&self, coord: Coord<W, H>) -> bool {
+        self.mine_indices.get(coord)
     }
 }
 
 #[cfg(test)]
 impl<const W: usize, const H: usize> Minefield<W, H> {
-    pub fn get_mine_indices(&mut self) -> &mut [[bool; W]; H] {
+    pub fn get_mine_indices(&mut self) -> &mut Matrix<bool, W, H> {
         &mut self.mine_indices
     }
 }

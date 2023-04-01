@@ -1,6 +1,6 @@
 use std::hint::black_box;
 
-use crate::minefield::{Cell, Coord, GameState, Minefield, MinefieldError};
+use crate::minefield::{Cell, Coord, GameState, Matrix, Minefield, MinefieldError};
 
 #[test]
 fn test_generation() {
@@ -11,7 +11,7 @@ fn test_generation() {
 
         let indices = minefield.get_mine_indices();
         let mut mine_count = 0;
-        for row in indices {
+        for row in indices.iter() {
             for index in row {
                 if *index {
                     mine_count += 1;
@@ -65,23 +65,23 @@ fn test_game_state() {
 fn test_automatic_recursive_reveal() {
     use Cell::*;
 
-    let mut minefield = Minefield::<5, 5>::with_mines([
+    let mut minefield = Minefield::<5, 5>::with_mines(Matrix([
         [false, false, false, false, false],
         [false, false, false, true, true],
         [false, false, false, false, false],
         [false, false, false, false, true],
         [false, false, false, false, true],
-    ]);
+    ]));
 
     minefield.reveal(Coord(1, 1)).unwrap();
 
-    let expected = [
+    let expected = Matrix([
         [Empty, Empty, Label(1), Hidden, Hidden],
         [Empty, Empty, Label(1), Hidden, Hidden],
         [Empty, Empty, Label(1), Label(3), Hidden],
         [Empty, Empty, Empty, Label(2), Hidden],
         [Empty, Empty, Empty, Label(2), Hidden],
-    ];
+    ]);
 
     assert_eq!(minefield.field, expected);
 }
@@ -116,13 +116,13 @@ fn test_flag() {
     let mut minefield = Minefield::<10, 10>::generate(10).unwrap();
     let empty_coord = find_cell(&mut minefield, false).unwrap();
     minefield.reveal(empty_coord).unwrap();
-    let curr_cell = minefield.field[empty_coord.1][empty_coord.0];
+    let curr_cell = minefield.field.get(empty_coord);
 
     // Try to flag and unflag the now revealed cell, should do nothing
     minefield.flag(empty_coord).unwrap();
-    assert_eq!(minefield.field[empty_coord.1][empty_coord.0], curr_cell);
+    assert_eq!(minefield.field.get(empty_coord), curr_cell);
     minefield.flag(empty_coord).unwrap();
-    assert_eq!(minefield.field[empty_coord.1][empty_coord.0], curr_cell);
+    assert_eq!(minefield.field.get(empty_coord), curr_cell);
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn test_reveal_and_flag_errors() {
 
 #[test]
 fn test_recursive_reveal_wont_panic() {
-    let mut minefield = Minefield::<10, 10>::with_mines([[false; 10]; 10]);
+    let mut minefield = Minefield::<10, 10>::with_mines(Matrix([[false; 10]; 10]));
     minefield.reveal(Coord(5, 5)).unwrap();
 }
 
