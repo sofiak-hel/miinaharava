@@ -4,9 +4,11 @@
 [![codecov](https://codecov.io/gh/sofiak-hel/minesweeper/branch/main/graph/badge.svg?token=LK0NOTUKGI)](https://codecov.io/gh/sofiak-hel/minesweeper)
 
 Tests are currently being run automatically in CI, code coverage is being
-gathered via `tarpaulin` and said coverage is uploaded to `codecov.io` for
-hosting of the actual files that can be viewed. Above badges show easily whether
-tests pass and how much of the tested filebase is covered.
+gathered via [`tarpaulin`](https://github.com/xd009642/tarpaulin) and said
+coverage is uploaded to
+[`codecov.io`](https://codecov.io/gh/sofiak-hel/minesweeper) for hosting of the
+actual files that can be viewed. Above badges show easily whether tests pass and
+how much of the tested filebase is covered.
 
 A more detailed viewing of the coverage can be found here:
 https://codecov.io/gh/sofiak-hel/minesweeper
@@ -38,7 +40,7 @@ file.
 - [miinaharava/src/minefield_renderer.rs](../miinaharava/src/minefield_renderer.rs)
 - [miinaharava/src/main.rs](../miinaharava/src/main.rs)
 - [minesweeper-ai/src/main.rs](../minesweeper-ai/src/main.rs)
-- [minesweeper-ai/src/thread_controller.rs](../minesweeper-ai/src/thread_controller.rs.rs)
+- [minesweeper-ai/src/thread_controller.rs](../minesweeper-ai/src/thread_controller.rs)
     - This one could be separated into at least two files, it has some elements
       that could in theory be tested, but it remains to see if I have the time
       to implement said tests, since they are not entirely relevant to the AI
