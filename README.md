@@ -100,6 +100,6 @@ To get coverage in the terminal:
 1. Install tarpaulin with `cargo install cargo-tarpaulin`
 2. Run `cargo tarpaulin --exclude-files='miinaharava/src/minefield_renderer.rs,miinaharava/src/game.rs,miinaharava/src/main.rs,minesweeper-ai/src/main.rs,minesweeper-ai/src/thread_controller.rs' --engine Llvm`
 
-Both here and in codecov.io the three files in the above flag are excluded
-because they are highly related to rendering and user input, difficult to test
-and mostly irrelevant to this project and therefore intentionally not tested.
+Both here and in codecov.io the files in the above flag are excluded because
+they are highly related to rendering and user input, difficult to test and
+mostly irrelevant to this project and therefore intentionally not tested.
