@@ -39,12 +39,12 @@ pub enum Difficulty {
 pub struct ThreadController {
     /// The state that is being processed
     pub state: Arc<Mutex<StateWrapper>>,
+    /// Whether the thread should still continue, or if it should entirely shut
+    /// down.
+    pub running: Arc<AtomicBool>,
     /// Represents the duration which is waited (if any) before processing the
     /// next thing
     delay: Arc<Mutex<Option<Duration>>>,
-    /// Whether the thread should still continue, or if it should entirely shut
-    /// down.
-    running: Arc<AtomicBool>,
     /// Whether the thread should be paused.
     paused: Arc<AtomicBool>,
     /// Join handle, which represents the thread itself. Used in the
@@ -54,7 +54,7 @@ pub struct ThreadController {
 
 impl ThreadController {
     /// Start the thread that continually plays games
-    pub fn start(state: StateWrapper, paused: bool) -> ThreadController {
+    pub fn start(state: StateWrapper, paused: bool, max_games: Option<u32>) -> ThreadController {
         let state = Arc::new(Mutex::new(state));
         let running = Arc::new(AtomicBool::new(true));
         let paused = Arc::new(AtomicBool::new(paused));
@@ -78,7 +78,13 @@ impl ThreadController {
                             last_move = now;
                         }
                         let mut lock = state.lock().unwrap();
-                        lock.process(delay.is_none());
+                        let stats = lock.process(delay.is_none());
+                        if let Some(max_games) = max_games {
+                            if (stats.games.0 + stats.games.1) >= max_games {
+                                running.store(false, Ordering::Relaxed);
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -129,7 +135,7 @@ pub enum StateWrapper {
 impl StateWrapper {
     /// Simply calls `process` on the current State, convenience function to
     /// avoid having to match generics.
-    pub fn process(&mut self, super_speed: bool) {
+    pub fn process(&mut self, super_speed: bool) -> StateStats {
         match self {
             StateWrapper::Easy(s) => s.process(super_speed),
             StateWrapper::Intermediate(s) => s.process(super_speed),
@@ -202,7 +208,7 @@ impl<const W: usize, const H: usize> State<W, H> {
     /// 1. If game already over, generate a new map
     /// 2. If there are no [Decision]s left, [ponder] and measure the time
     /// 3. Act on the next [Decision] (multiple if super_speed is on)
-    pub fn process(&mut self, super_speed: bool) {
+    pub fn process(&mut self, super_speed: bool) -> StateStats {
         if self.minefield.game_state() != GameState::Pending {
             match self.minefield.game_state() {
                 GameState::Victory => self.stats.games.0 += 1,
@@ -231,5 +237,6 @@ impl<const W: usize, const H: usize> State<W, H> {
                 break;
             }
         }
+        self.stats
     }
 }

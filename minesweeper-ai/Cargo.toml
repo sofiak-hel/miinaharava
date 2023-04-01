@@ -13,3 +13,4 @@ profiler = true
 miinaharava = { path = "../miinaharava" }
 arrayvec = "0.7.2"
 rand = "0.8.5"
+argh = "0.1.10"
