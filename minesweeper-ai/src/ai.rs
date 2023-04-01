@@ -1,9 +1,7 @@
 //! General module for ai related functions, just mostly a home for the
 //! [ponder]-function.
 
-use std::time::Instant;
-
-use miinaharava::minefield::{Cell, Coord, GameState, Minefield};
+use miinaharava::minefield::{Cell, Coord, Minefield};
 use rand::seq::SliceRandom;
 
 use crate::csp::ConstaintSatisficationState;

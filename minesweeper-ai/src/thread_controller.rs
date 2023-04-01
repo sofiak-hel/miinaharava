@@ -1,3 +1,7 @@
+//! Represents a controller for the thread that is mainly used for the AI to do
+//! it's things so that it will not clog up any possible user-interface that the
+//! program is shipped and run with.
+
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -11,6 +15,7 @@ use miinaharava::minefield::{GameState, Minefield};
 
 use crate::ai::{ponder, Decision};
 
+/// Macro that is useful for measuring how long a certain expression took.
 macro_rules! measure {
     ( $x:expr ) => {{
         let before = Instant::now();
@@ -32,19 +37,27 @@ pub enum Difficulty {
 
 /// Controller for the Ai's [State], which continually plays games by the AI.
 pub struct ThreadController {
+    /// The state that is being processed
     pub state: Arc<Mutex<StateWrapper>>,
+    /// Represents the duration which is waited (if any) before processing the
+    /// next thing
     delay: Arc<Mutex<Option<Duration>>>,
+    /// Whether the thread should still continue, or if it should entirely shut
+    /// down.
     running: Arc<AtomicBool>,
+    /// Whether the thread should be paused.
     paused: Arc<AtomicBool>,
+    /// Join handle, which represents the thread itself. Used in the
+    /// Drop-implementation
     join_handle: Option<JoinHandle<()>>,
 }
 
 impl ThreadController {
     /// Start the thread that continually plays games
-    pub fn start() -> ThreadController {
-        let state = Arc::new(Mutex::new(StateWrapper::Easy(State::new(10))));
+    pub fn start(state: StateWrapper, paused: bool) -> ThreadController {
+        let state = Arc::new(Mutex::new(state));
         let running = Arc::new(AtomicBool::new(true));
-        let paused = Arc::new(AtomicBool::new(false));
+        let paused = Arc::new(AtomicBool::new(paused));
         let delay = Arc::new(Mutex::new(None));
 
         let join_handle = Some(std::thread::spawn({
@@ -80,21 +93,16 @@ impl ThreadController {
         }
     }
 
+    /// Change the delay used by the thread.
     pub fn set_delay(&mut self, delay: Option<Duration>) {
         *self.delay.lock().unwrap() = delay;
     }
 
-    pub fn toggle_pause(&mut self) {
-        self.paused
-            .store(!self.paused.load(Ordering::Relaxed), Ordering::Relaxed);
-    }
-
-    pub fn reset_with_difficulty(&mut self, difficulty: Difficulty) {
-        *self.state.lock().unwrap() = match difficulty {
-            Difficulty::Easy => StateWrapper::Easy(State::new(10)),
-            Difficulty::Intermediate => StateWrapper::Intermediate(State::new(40)),
-            Difficulty::Expert => StateWrapper::Expert(State::new(99)),
-        }
+    /// Toggle whether the thread should be paused
+    pub fn toggle_pause(&mut self) -> bool {
+        let value = !self.paused.load(Ordering::Relaxed);
+        self.paused.store(value, Ordering::Relaxed);
+        value
     }
 }
 
@@ -105,15 +113,22 @@ impl Drop for ThreadController {
     }
 }
 
+/// Represents the current State of the Game, but wrapped in an enum that can be
+/// handled without having to define generics for the handling struct.
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 pub enum StateWrapper {
+    /// Represents a state for the Easy-difficulty (10x10)
     Easy(State<10, 10>),
+    /// Represents a state for the Intermediate-difficulty (16x16)
     Intermediate(State<16, 16>),
+    /// Represents a state for the Expert-difficulty (30x16)
     Expert(State<30, 16>),
 }
 
 impl StateWrapper {
+    /// Simply calls `process` on the current State, convenience function to
+    /// avoid having to match generics.
     pub fn process(&mut self, super_speed: bool) {
         match self {
             StateWrapper::Easy(s) => s.process(super_speed),
@@ -122,6 +137,8 @@ impl StateWrapper {
         }
     }
 
+    /// Returns the stats for the current State, convenience function to avoid
+    /// having to match generics.
     pub fn stats(&self) -> StateStats {
         match self {
             StateWrapper::Easy(s) => s.stats,
@@ -135,18 +152,27 @@ impl StateWrapper {
 /// reset every time difficulty changes (or the game is otherwise reset).
 #[derive(Clone)]
 pub struct State<const W: usize, const H: usize> {
+    /// The current minefield, regenerated after previous is completed.
     pub minefield: Minefield<W, H>,
+    /// Current Stats for the state
     pub stats: StateStats,
+    /// The current stack of decisions from the last ponder.
     decisions: Vec<Decision<W, H>>,
 }
 
 /// The common statistics from a State, that are not bound by generics.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct StateStats {
+    /// How many mines are in the current game state (re-used when regenerating
+    /// minefield)
     pub mines: u8,
+    /// How many games have been finished (Victories, Losses)
     pub games: (u32, u32),
+    /// How much time has the AI spent [ponder]ing
     pub ai_time: Duration,
+    /// How much time has been spent generating minefields
     pub generation_time: Duration,
+    /// How much time has been spent revealing or flagging tiles.
     pub decision_time: Duration,
 }
 
