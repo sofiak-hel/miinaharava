@@ -107,16 +107,16 @@ impl<'a> Game<'a> {
         let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
         layout.reset(&LayoutSettings {
             x: 910.,
-            y: 100.,
+            y: 30.,
             max_width: Some(370.),
             horizontal_align: HorizontalAlign::Center,
             ..Default::default()
         });
         let mut extra_layout = Layout::new(CoordinateSystem::PositiveYDown);
         extra_layout.reset(&LayoutSettings {
-            x: 910.,
-            y: 300.,
-            max_width: Some(370.),
+            x: 850.,
+            y: 230.,
+            max_width: Some(450.),
             horizontal_align: HorizontalAlign::Left,
             ..Default::default()
         });

@@ -26,14 +26,13 @@ fn solve_trivial_field() {
 
     let mut max_decisions = 20;
     while minefield.game_state() == GameState::Pending && max_decisions > 0 {
-        if let Some(decisions) = ponder(&minefield) {
-            for decision in decisions {
-                match decision {
-                    Decision::Flag(coord) => minefield.flag(coord),
-                    Decision::Reveal(coord) => minefield.reveal(coord),
-                }
-                .unwrap();
+        let decisions = ponder(&minefield);
+        for decision in decisions {
+            match decision {
+                Decision::Flag(coord) => minefield.flag(coord),
+                Decision::Reveal(coord) => minefield.reveal(coord),
             }
+            .ok();
         }
         max_decisions -= 1;
     }
@@ -44,7 +43,7 @@ fn solve_trivial_field() {
 fn first_ponder_is_a_corner() {
     for _ in 0..100 {
         let minefield = Minefield::<10, 10>::generate(10).unwrap();
-        let decisions = ponder(&minefield).unwrap();
+        let decisions = ponder(&minefield);
         let decision = decisions.get(0).unwrap();
         assert!(matches!(decision, Decision::Reveal(Coord(0 | 9, 0 | 9))));
     }

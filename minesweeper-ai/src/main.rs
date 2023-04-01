@@ -4,98 +4,130 @@
 #![warn(missing_docs)]
 #![warn(clippy::missing_docs_in_private_items)]
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-use ai::{ponder, Decision};
 use miinaharava::{
     game::{Game, GameWindow},
-    minefield::{GameState, Minefield},
+    minefield::Minefield,
     sdl2::{event::Event, keyboard::Keycode},
 };
+use thread_controller::{Difficulty, StateWrapper, ThreadController};
 
 mod ai;
 mod csp;
+mod thread_controller;
 
 #[cfg(test)]
 mod tests;
 
-/// Represents a difficulty level
-#[derive(Clone, Copy, Debug)]
-enum Difficulty {
-    /// 10x10 field with 10 mines
-    Easy,
-    /// 16x16 field with 40 mines
-    Intermediate,
-    /// 30x16 field with 99 mines
-    Expert,
-}
+/// TODO: docs
+// pub fn main() {
+//     let true_start = Instant::now();
+//     loop {
+//         let stats = {
+//             let state = thread_controller.state.lock().unwrap();
+//             state.stats()
+//         };
+//         let games_played = stats.games.0 + stats.games.1;
+//         if games_played > 1 {
+//             dbg!(&stats);
+//             let subtotal = stats.ai_time + stats.generation_time + stats.decision_time;
+//             let total = (Instant::now() - true_start).as_secs_f32();
+//             println!("total: {:?}, boilerplate: {:?}", total, total - subtotal);
+//             println!("{:?}", total);
+//             break;
+//         }
+//     }
+// }
 
 /// main docs
 pub fn main() {
     let mut window = GameWindow::start();
     let mut game = Game::init(&mut window);
+    let mut thread_controller = ThreadController::start();
 
-    let mut difficulty = Some(Difficulty::Easy);
-    while let Some(diff) = difficulty {
-        game.extra_layout.clear();
-        game.append_extra(format!("Difficulty: {:?}\n\n", diff), None, None);
-        game.append_keybind("1", format!("{:?}", Difficulty::Easy));
-        game.append_keybind("2", format!("{:?}", Difficulty::Intermediate));
-        game.append_keybind("3", format!("{:?}", Difficulty::Expert));
-        difficulty = start_game(&mut game, diff);
-    }
-}
-
-/// qwe
-fn start_game(game: &mut Game, difficulty: Difficulty) -> Option<Difficulty> {
-    game.timer = 0.;
-    match difficulty {
-        Difficulty::Easy => game_main::<10, 10>(game, 10),
-        Difficulty::Intermediate => game_main::<16, 16>(game, 40),
-        Difficulty::Expert => game_main::<30, 16>(game, 99),
-    }
+    // let mut difficulty = Some(Difficulty::Easy);
+    game_main(&mut game, &mut thread_controller);
+    // while let Some(diff) = difficulty {
+    //     game.extra_layout.clear();
+    //     game.append_extra(format!("Difficulty: {:?}\n\n", diff), None, None);
+    //     game.append_keybind("1", format!("{:?}", Difficulty::Easy));
+    //     game.append_keybind("2", format!("{:?}", Difficulty::Intermediate));
+    //     game.append_keybind("3", format!("{:?}", Difficulty::Expert));
+    // }
 }
 
 /// asd
-fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Option<Difficulty> {
-    let mut minefield = Minefield::<W, H>::generate(mines).unwrap();
-    let mut next_difficulty = None;
-    let mut last_move = Instant::now();
+fn game_main(game: &mut Game, thread_controller: &mut ThreadController) {
+    game.timer = 0.;
+    game.timer_paused = false;
+    let mut delay = Duration::from_millis(25);
+    thread_controller.set_delay(Some(delay));
 
-    while let (Some(events), None) = (game.update(), next_difficulty) {
+    while let Some(events) = game.update() {
         for event in events.events {
-            let next_diff = match event {
-                Event::KeyDown {
-                    keycode: Some(keycode),
-                    ..
-                } => match keycode {
-                    Keycode::Num1 => Some(Difficulty::Easy),
-                    Keycode::Num2 => Some(Difficulty::Intermediate),
-                    Keycode::Num3 => Some(Difficulty::Expert),
-                    _ => None,
-                },
-                _ => None,
-            };
-            next_difficulty = next_diff.or(next_difficulty);
-        }
-
-        // AI decision making here
-        let now = Instant::now();
-        if (now - last_move).as_secs_f32() > 1. {
-            last_move = now;
-            if let Some(decisions) = ponder(&minefield) {
-                for decision in decisions {
-                    match decision {
-                        Decision::Reveal(coord) => minefield.reveal(coord),
-                        Decision::Flag(coord) => minefield.flag(coord),
+            if let Event::KeyDown {
+                keycode: Some(c), ..
+            } = event
+            {
+                match c {
+                    Keycode::Num1 => thread_controller.reset_with_difficulty(Difficulty::Easy),
+                    Keycode::Num2 => {
+                        thread_controller.reset_with_difficulty(Difficulty::Intermediate)
                     }
-                    .ok();
+                    Keycode::Num3 => thread_controller.reset_with_difficulty(Difficulty::Expert),
+                    Keycode::Up => {
+                        delay += Duration::from_millis(1);
+                        thread_controller.set_delay(Some(delay));
+                    }
+                    Keycode::Down => {
+                        delay -= Duration::from_millis(1).min(delay);
+                        delay = delay.max(Duration::from_micros(100));
+                        thread_controller.set_delay(Some(delay));
+                    }
+                    Keycode::Space => thread_controller.toggle_pause(),
+                    _ => (),
                 }
             }
         }
 
-        game.timer_paused = minefield.game_state() != GameState::Pending;
-        game.draw(&minefield, None);
+        let state = {
+            let lock = thread_controller.state.lock().unwrap();
+            lock.clone()
+        };
+
+        game.extra_layout.clear();
+        game.append_keybind("1", "Easy");
+        game.append_keybind("2", "Intermediate");
+        game.append_keybind("3", "Expert");
+        game.append_keybind("Space", "Toggle Pause");
+        game.append_keybind("Up/Down", format!("Delay {:.1?}\n", delay));
+
+        let total_games = state.stats().games.0 + state.stats().games.1;
+        let victory_percent = (state.stats().games.0 as f32 / total_games as f32) * 100.;
+        let average_game = state.stats().ai_time / total_games.max(1);
+
+        game.append_extra(format!("Games played: {:?}\n", total_games), None, None);
+        game.append_extra(
+            format!(
+                "  {} ({:.0}%) Success\n",
+                state.stats().games.1,
+                victory_percent
+            ),
+            None,
+            None,
+        );
+        game.append_extra(
+            format!("AI Time Spent: {:.0?}\n", state.stats().ai_time),
+            None,
+            None,
+        );
+        game.append_extra(format!("Avg. game: {:.0?}\n", average_game), None, None);
+
+        match state {
+            StateWrapper::Easy(state) => game.draw(&state.minefield, None),
+            StateWrapper::Intermediate(state) => game.draw(&state.minefield, None),
+            StateWrapper::Expert(state) => game.draw(&state.minefield, None),
+        }
     }
-    next_difficulty
 }
