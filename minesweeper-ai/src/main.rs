@@ -9,11 +9,7 @@ use miinaharava::{
     game::{Game, GameWindow},
     sdl2::{event::Event, keyboard::Keycode},
 };
-use std::{
-    os::unix::thread,
-    sync::atomic::Ordering,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 use thread_controller::{Difficulty, StateStats, StateWrapper, ThreadController};
 
 mod ai;
@@ -231,6 +227,7 @@ struct CommandLineArguments {
     seconds: Option<u32>,
 }
 
+/// Try to parse difficulty from string
 fn difficulty_from_str(value: &str) -> Result<Difficulty, String> {
     Ok(match value.to_lowercase().trim() {
         "easy" => Difficulty::Easy,
