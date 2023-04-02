@@ -84,16 +84,19 @@ pub struct Matrix<T: Copy, const W: usize, const H: usize>(pub [[T; W]; H]);
 
 impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
     /// Get element in position of Coord from the matrix
+    #[inline]
     pub fn get(&self, coord: Coord<W, H>) -> T {
         self.0[coord.1][coord.0]
     }
 
     /// Set element in position of Coord from the matrix
+    #[inline]
     pub fn set(&mut self, coord: Coord<W, H>, item: T) {
         self.0[coord.1][coord.0] = item;
     }
 
     /// Return an iterator for the rows
+    #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &[T; W]> {
         self.0.iter()
     }
@@ -115,6 +118,7 @@ pub struct Minefield<const W: usize, const H: usize> {
     pub field: Matrix<Cell, W, H>,
     /// How many mines are in the field.
     pub mines: u8,
+    game_state: GameState,
 }
 
 impl<const W: usize, const H: usize> Minefield<W, H> {
@@ -139,6 +143,7 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
                 mine_indices: Matrix(mine_indices),
                 field: Matrix([[Cell::Hidden; W]; H]),
                 mines,
+                game_state: GameState::Pending,
             })
         }
     }
@@ -154,12 +159,19 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
                 .into_iter()
                 .map(|row| row.iter().filter(|i| **i).count() as u8)
                 .sum(),
+            game_state: GameState::Pending,
         }
     }
 
-    /// Returns the current state of the game.
+    /// Return the current state of the game immutably.
+    #[inline]
     pub fn game_state(&self) -> GameState {
-        if self.field.into_iter().flatten().any(|c| c == Cell::Mine) {
+        self.game_state
+    }
+
+    /// Update the current state of the game.
+    fn update_game_state(&mut self) {
+        self.game_state = if self.field.into_iter().flatten().any(|c| c == Cell::Mine) {
             GameState::GameOver
         } else if self
             .field
@@ -171,7 +183,7 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
             GameState::Victory
         } else {
             GameState::Pending
-        }
+        };
     }
 
     /// Attempts to reveal a tile.
@@ -197,6 +209,7 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
                         };
                     }
                 }
+                self.update_game_state();
             }
             Ok(())
         }
