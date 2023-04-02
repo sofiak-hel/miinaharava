@@ -60,16 +60,16 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
     /// Constructs a CPS-state from a given minefield. Goes through all labels
     /// in the visual field and creates a constraint from them.
     pub fn from(minefield: &Minefield<W, H>) -> Self {
-        let mut constraints = Vec::new();
+        let mut constraints = Vec::with_capacity(W * H);
 
         for (y, row) in minefield.field.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
                 if let Cell::Label(mut num) = cell {
                     let mut neighbors = ArrayVec::new();
-                    for neighbor in Coord::<W, H>(x, y).neighbours() {
-                        match minefield.field.get(neighbor) {
+                    for neighbor in Coord::<W, H>(x, y).neighbours().iter() {
+                        match minefield.field.get(*neighbor) {
                             Cell::Flag => num -= 1,
-                            Cell::Hidden => neighbors.push(neighbor),
+                            Cell::Hidden => neighbors.push(*neighbor),
                             _ => {}
                         };
                     }

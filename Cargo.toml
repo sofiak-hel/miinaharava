@@ -3,3 +3,6 @@ members = [
     "miinaharava",
     "minesweeper-ai"
 ]
+
+[profile.release]
+debug = true

@@ -86,13 +86,15 @@ impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
     /// Get element in position of Coord from the matrix
     #[inline]
     pub fn get(&self, coord: Coord<W, H>) -> T {
-        self.0[coord.1][coord.0]
+        unsafe { *self.0.get_unchecked(coord.1).get_unchecked(coord.0) }
     }
 
     /// Set element in position of Coord from the matrix
     #[inline]
     pub fn set(&mut self, coord: Coord<W, H>, item: T) {
-        self.0[coord.1][coord.0] = item;
+        unsafe {
+            *self.0.get_unchecked_mut(coord.1).get_unchecked_mut(coord.0) = item;
+        }
     }
 
     /// Return an iterator for the rows
@@ -170,15 +172,16 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
     }
 
     /// Update the current state of the game.
+    #[inline]
     fn update_game_state(&mut self) {
-        self.game_state = if self.field.into_iter().flatten().any(|c| c == Cell::Mine) {
+        self.game_state = if self.field.iter().flatten().any(|c| *c == Cell::Mine) {
             GameState::GameOver
         } else if self
             .field
             .into_iter()
             .flatten()
-            .zip(self.mine_indices.into_iter().flatten())
-            .all(|(c, is_mine)| (c == Cell::Hidden || c == Cell::Flag) == is_mine)
+            .zip(self.mine_indices.iter().flatten())
+            .all(|(c, is_mine)| (c == Cell::Hidden || c == Cell::Flag) == *is_mine)
         {
             GameState::Victory
         } else {
@@ -192,6 +195,13 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
     /// - [MinefieldError::GameHasEnded] if the game is already over
     /// - [MinefieldError::InvalidCoordinate] if the attempted coordinate was not valid.
     pub fn reveal(&mut self, coord: Coord<W, H>) -> Result<(), MinefieldError> {
+        self._reveal(coord, true)
+    }
+
+    /// Private reveal function that contains `update_state`-parameter simply to
+    /// help with recursion, literally halving the amount of time that reveal
+    /// would otherwise take.
+    fn _reveal(&mut self, coord: Coord<W, H>, update_state: bool) -> Result<(), MinefieldError> {
         if self.game_state() != GameState::Pending {
             Err(MinefieldError::GameHasEnded)
         } else if coord.0 >= W || coord.1 >= H {
@@ -203,13 +213,15 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
                 self.field.set(coord, cell);
                 if cell == Cell::Empty {
                     for neighbor in coord.neighbours() {
-                        match self.reveal(neighbor) {
+                        match self._reveal(neighbor, false) {
                             Err(MinefieldError::GameHasEnded) => break,
                             e => e?,
                         };
                     }
                 }
-                self.update_game_state();
+                if update_state {
+                    self.update_game_state();
+                }
             }
             Ok(())
         }

@@ -21,9 +21,9 @@ pub enum Decision<const W: usize, const H: usize> {
 /// decisions based on it.
 pub fn ponder<const W: usize, const H: usize>(minefield: &Minefield<W, H>) -> Vec<Decision<W, H>> {
     let mut first_ponder = true;
-    'outer: for row in minefield.field {
+    'outer: for row in minefield.field.iter() {
         for cell in row {
-            if cell != Cell::Hidden {
+            if *cell != Cell::Hidden {
                 first_ponder = false;
                 break 'outer;
             }
