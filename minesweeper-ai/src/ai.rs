@@ -49,9 +49,9 @@ pub fn ponder<const W: usize, const H: usize>(minefield: &Minefield<W, H>) -> Ve
 pub fn guess<const W: usize, const H: usize>(minefield: &Minefield<W, H>) -> Decision<W, H> {
     let corners: Vec<Coord<W, H>> = vec![
         Coord(0, 0),
-        Coord(W - 1, 0),
-        Coord(0, H - 1),
-        Coord(W - 1, H - 1),
+        Coord(W as u8 - 1, 0),
+        Coord(0, H as u8 - 1),
+        Coord(W as u8 - 1, H as u8 - 1),
     ]
     .into_iter()
     .filter(|coord| minefield.field.get(*coord) == Cell::Hidden)

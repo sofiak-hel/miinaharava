@@ -54,7 +54,7 @@ fn test_game_state() {
             if !*item {
                 // Game might be victorious ahead of time because of automatic
                 // recursive reveal, just ok() this
-                minefield.reveal(Coord(x, y)).ok();
+                minefield.reveal(Coord(x as u8, y as u8)).ok();
             }
         }
     }
@@ -96,7 +96,7 @@ fn test_flag() {
 
     for (y, row) in minefield.field.iter().enumerate() {
         for (x, item) in row.iter().enumerate() {
-            if Coord(x, y) == random_coord {
+            if Coord(x as u8, y as u8) == random_coord {
                 assert_eq!(*item, Cell::Flag);
             } else {
                 assert_eq!(*item, Cell::Hidden);
@@ -170,7 +170,7 @@ fn find_cell<const W: usize, const H: usize>(
     for (y, row) in indices.iter().enumerate() {
         for (x, item) in row.iter().enumerate() {
             if *item == is_mine {
-                return Some(Coord(x, y));
+                return Some(Coord(x as u8, y as u8));
             }
         }
     }

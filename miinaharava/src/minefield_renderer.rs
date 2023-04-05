@@ -36,8 +36,8 @@ impl<'a> MinefieldRenderer<'a> {
     ) {
         let (pos_x, pos_y, total_w, total_h) = self.get_target::<W, H>().into();
         let (w, h) = (total_w / W as u32, total_h / H as u32);
-        for y in 0..H {
-            for x in 0..W {
+        for y in 0..(H as u8) {
+            for x in 0..(W as u8) {
                 let dest_rect = Rect::new(
                     pos_x + (x as u32 * w) as i32,
                     pos_y + (y as u32 * h) as i32,
@@ -61,7 +61,7 @@ impl<'a> MinefieldRenderer<'a> {
         let x = (mouse.0 - pos_x) / w;
         let y = (mouse.1 - pos_y) / h;
         if x >= 0 && x < W as i32 && y >= 0 && y < H as i32 {
-            Some(Coord(x as usize, y as usize))
+            Some(Coord(x as u8, y as u8))
         } else {
             None
         }

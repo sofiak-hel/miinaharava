@@ -66,7 +66,7 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
             for (x, cell) in row.iter().enumerate() {
                 if let Cell::Label(mut num) = cell {
                     let mut neighbors = ArrayVec::new();
-                    for neighbor in Coord::<W, H>(x, y).neighbours().iter() {
+                    for neighbor in Coord::<W, H>(x as u8, y as u8).neighbours().iter() {
                         match minefield.field.get(*neighbor) {
                             Cell::Flag => num -= 1,
                             Cell::Hidden => neighbors.push(*neighbor),
@@ -105,3 +105,5 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
         Ok(decisions)
     }
 }
+
+pub struct CoupledConstraints {}

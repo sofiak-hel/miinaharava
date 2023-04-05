@@ -8,7 +8,7 @@ use arrayvec::ArrayVec;
 
 /// Represents a tile coordinate on the minefield.
 #[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
-pub struct Coord<const W: usize, const H: usize>(pub usize, pub usize);
+pub struct Coord<const W: usize, const H: usize>(pub u8, pub u8);
 
 impl<const W: usize, const H: usize> Coord<W, H> {
     /// Returns all possible 8 neighboring coordinates for the given coordinate.
@@ -21,7 +21,7 @@ impl<const W: usize, const H: usize> Coord<W, H> {
                 let (newx, newy) = (self.0 as i8 + x, self.1 as i8 + y);
                 if newx >= 0 && newy >= 0 && newx < W as i8 && newy < H as i8 && (x != 0 || y != 0)
                 {
-                    list.push(Coord(newx as usize, newy as usize))
+                    list.push(Coord(newx as u8, newy as u8))
                 }
             }
         }
@@ -30,7 +30,10 @@ impl<const W: usize, const H: usize> Coord<W, H> {
 
     /// Returns a random valid coordinate
     pub fn random() -> Coord<W, H> {
-        Coord(rand::random::<usize>() % W, rand::random::<usize>() % H)
+        Coord(
+            rand::random::<u8>() % (W as u8),
+            rand::random::<u8>() % (H as u8),
+        )
     }
 }
 
@@ -86,14 +89,22 @@ impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
     /// Get element in position of Coord from the matrix
     #[inline]
     pub fn get(&self, coord: Coord<W, H>) -> T {
-        unsafe { *self.0.get_unchecked(coord.1).get_unchecked(coord.0) }
+        unsafe {
+            *self
+                .0
+                .get_unchecked(coord.1 as usize)
+                .get_unchecked(coord.0 as usize)
+        }
     }
 
     /// Set element in position of Coord from the matrix
     #[inline]
     pub fn set(&mut self, coord: Coord<W, H>, item: T) {
         unsafe {
-            *self.0.get_unchecked_mut(coord.1).get_unchecked_mut(coord.0) = item;
+            *self
+                .0
+                .get_unchecked_mut(coord.1 as usize)
+                .get_unchecked_mut(coord.0 as usize) = item;
         }
     }
 
@@ -129,20 +140,20 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
     /// # Errors
     /// - [MinefieldError::TooManyMines] if the amount of mines is too large.
     pub fn generate(mines: u8) -> Result<Self, MinefieldError> {
-        let mut mine_indices = [[false; W]; H];
+        let mut mine_indices = Matrix([[false; W]; H]);
         if mines as usize > W * H {
             Err(MinefieldError::TooManyMines)
         } else {
             for _ in 0..mines {
                 let mut coord = Coord::<W, H>::random();
-                while mine_indices[coord.1][coord.0] {
+                while mine_indices.get(coord) {
                     coord = Coord::random();
                 }
-                mine_indices[coord.1][coord.0] = true;
+                mine_indices.set(coord, true);
             }
 
             Ok(Minefield {
-                mine_indices: Matrix(mine_indices),
+                mine_indices,
                 field: Matrix([[Cell::Hidden; W]; H]),
                 mines,
                 game_state: GameState::Pending,
@@ -204,7 +215,7 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
     fn _reveal(&mut self, coord: Coord<W, H>, update_state: bool) -> Result<(), MinefieldError> {
         if self.game_state() != GameState::Pending {
             Err(MinefieldError::GameHasEnded)
-        } else if coord.0 >= W || coord.1 >= H {
+        } else if coord.0 >= (W as u8) || coord.1 >= (H as u8) {
             Err(MinefieldError::InvalidCoordinate)
         } else {
             let field_cell = self.field.get(coord);
@@ -235,7 +246,7 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
     pub fn flag(&mut self, coord: Coord<W, H>) -> Result<(), MinefieldError> {
         if self.game_state() != GameState::Pending {
             Err(MinefieldError::GameHasEnded)
-        } else if coord.0 >= W || coord.1 >= H {
+        } else if coord.0 >= (W as u8) || coord.1 >= (H as u8) {
             Err(MinefieldError::InvalidCoordinate)
         } else {
             self.field.set(
