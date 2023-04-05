@@ -179,7 +179,7 @@ fn start_with_window(difficulty: Difficulty) {
     game.timer_paused = false;
     let mut state = VisualState {
         controller: ThreadController::start(difficulty.into(), game.timer_paused, None),
-        delay: Duration::from_millis(25),
+        delay: Duration::from_millis(250),
         game,
     };
     state.controller.set_delay(Some(state.delay));

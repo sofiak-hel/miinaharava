@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use arrayvec::ArrayVec;
 
 /// Represents a tile coordinate on the minefield.
-#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 pub struct Coord<const W: usize, const H: usize>(pub u8, pub u8);
 
 impl<const W: usize, const H: usize> Coord<W, H> {

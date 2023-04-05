@@ -108,6 +108,14 @@ impl ThreadController {
     pub fn toggle_pause(&mut self) -> bool {
         let value = !self.paused.load(Ordering::Relaxed);
         self.paused.store(value, Ordering::Relaxed);
+        // If in debug mode, print the state of the CSP when pausing.
+        #[cfg(debug_assertions)]
+        {
+            if value {
+                let lock = self.state.lock().unwrap();
+                lock.print();
+            }
+        }
         value
     }
 }
@@ -151,6 +159,24 @@ impl StateWrapper {
             StateWrapper::Intermediate(s) => s.stats,
             StateWrapper::Expert(s) => s.stats,
         }
+    }
+
+    /// Returns the stats for the current State, convenience function to avoid
+    /// having to match generics.
+    #[cfg(debug_assertions)]
+    pub fn print(&self) {
+        use crate::csp::ConstaintSatisficationState;
+        match self {
+            StateWrapper::Easy(s) => {
+                dbg!(ConstaintSatisficationState::from(&s.minefield));
+            }
+            StateWrapper::Intermediate(s) => {
+                dbg!(ConstaintSatisficationState::from(&s.minefield));
+            }
+            StateWrapper::Expert(s) => {
+                dbg!(ConstaintSatisficationState::from(&s.minefield));
+            }
+        };
     }
 }
 

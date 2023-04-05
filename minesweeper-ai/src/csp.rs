@@ -3,7 +3,7 @@
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Cell, Coord, Minefield};
-use std::fmt::Debug;
+use std::{collections::HashSet, fmt::Debug};
 
 use crate::ai::Decision;
 
@@ -45,6 +45,15 @@ impl<const W: usize, const H: usize> PartialEq for Constraint<W, H> {
     }
 }
 
+impl<const W: usize, const H: usize> std::hash::Hash for Constraint<W, H> {
+    fn hash<Hasher: std::hash::Hasher>(&self, state: &mut Hasher) {
+        let mut a = self.variables.clone();
+        a.sort();
+        a.hash(state);
+        self.label.hash(state);
+    }
+}
+
 /// Custom error type for any failure states that might occur.
 #[derive(Debug)]
 pub enum CSPError {}
@@ -53,14 +62,14 @@ pub enum CSPError {}
 #[derive(Debug, Clone, Default)]
 pub struct ConstaintSatisficationState<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
-    pub constraints: Vec<Constraint<W, H>>,
+    pub constraints: ConstraintSets<W, H>,
 }
 
 impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
     /// Constructs a CPS-state from a given minefield. Goes through all labels
     /// in the visual field and creates a constraint from them.
     pub fn from(minefield: &Minefield<W, H>) -> Self {
-        let mut constraints = Vec::with_capacity(W * H);
+        let mut constraints = ConstraintSets(Vec::with_capacity(W * H));
 
         for (y, row) in minefield.field.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
@@ -73,10 +82,13 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
                             _ => {}
                         };
                     }
-                    constraints.push(Constraint {
-                        label: num,
-                        variables: neighbors,
-                    });
+                    if num > 0 || !neighbors.is_empty() {
+                        let constraint = Constraint {
+                            label: num,
+                            variables: neighbors,
+                        };
+                        constraints.insert(constraint);
+                    }
                 }
             }
         }
@@ -87,15 +99,17 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
     /// have an obvious answer.
     pub fn solve_trivial_cases(&self) -> Result<Vec<Decision<W, H>>, CSPError> {
         let mut decisions = Vec::new();
-        for constraint in &self.constraints {
-            if constraint.label as usize == constraint.variables.len() {
-                for variable in &constraint.variables {
-                    decisions.push(Decision::Flag(*variable));
+        for constraint_set in &self.constraints.0 {
+            for constraint in &constraint_set.constraints {
+                if constraint.label as usize == constraint.variables.len() {
+                    for variable in &constraint.variables {
+                        decisions.push(Decision::Flag(*variable));
+                    }
                 }
-            }
-            if constraint.label == 0 {
-                for variable in &constraint.variables {
-                    decisions.push(Decision::Reveal(*variable));
+                if constraint.label == 0 {
+                    for variable in &constraint.variables {
+                        decisions.push(Decision::Reveal(*variable));
+                    }
                 }
             }
         }
@@ -106,4 +120,74 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
     }
 }
 
-pub struct CoupledConstraints {}
+#[derive(Debug, Clone, Default)]
+pub struct ConstraintSets<const W: usize, const H: usize>(Vec<CoupledConstraints<W, H>>);
+
+impl<const W: usize, const H: usize> ConstraintSets<W, H> {
+    pub fn insert(&mut self, constraint: Constraint<W, H>) {
+        // Returns mutably all the constraint sets that contain any of the
+        // variables in the new constraints, and their indexes
+        let (mut indexes, sets): (Vec<usize>, Vec<&mut CoupledConstraints<W, H>>) = self
+            .0
+            .iter_mut()
+            .enumerate()
+            .filter(|(_, constraint_set)| {
+                constraint
+                    .variables
+                    .iter()
+                    .any(|v| constraint_set.variables.contains(v))
+            })
+            .unzip();
+
+        // Combine all retrieved constraints into the first constraint
+        let constraints = sets.into_iter().reduce(|a, b| a.combine(b));
+
+        // If a constraint set was found, insert the constraint set in it,
+        // otherwise create a new set.
+        if let Some(constraints) = constraints {
+            constraints.insert(constraint);
+        } else {
+            self.0.push(CoupledConstraints::from(constraint))
+        }
+
+        // Remove all other constraint sets
+        if !indexes.is_empty() {
+            indexes.remove(0);
+            for index in indexes.iter().rev() {
+                self.0.remove(*index);
+            }
+        }
+    }
+}
+
+/// Coupled Constraints
+#[derive(Debug, Clone, Default)]
+pub struct CoupledConstraints<const W: usize, const H: usize> {
+    /// List of label-mine-location-constraints for a given state
+    pub constraints: HashSet<Constraint<W, H>>,
+    /// List of all the variables that are in this set of coupled constraints
+    pub variables: HashSet<Coord<W, H>>,
+}
+
+impl<const W: usize, const H: usize> CoupledConstraints<W, H> {
+    pub fn from(constraint: Constraint<W, H>) -> CoupledConstraints<W, H> {
+        CoupledConstraints {
+            variables: HashSet::from_iter(constraint.variables.clone().into_iter()),
+            constraints: HashSet::from_iter([constraint].into_iter()),
+        }
+    }
+
+    pub fn combine(
+        &mut self,
+        other: &mut CoupledConstraints<W, H>,
+    ) -> &mut CoupledConstraints<W, H> {
+        self.constraints.extend(other.constraints.iter().cloned());
+        self.variables.extend(other.variables.iter().cloned());
+        self
+    }
+
+    pub fn insert(&mut self, constraint: Constraint<W, H>) {
+        self.variables.extend(constraint.variables.iter());
+        self.constraints.insert(constraint);
+    }
+}
