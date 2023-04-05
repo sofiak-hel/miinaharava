@@ -21,6 +21,48 @@ pub struct Constraint<const W: usize, const H: usize> {
     pub variables: ArrayVec<Coord<W, H>, 8>,
 }
 
+impl<const W: usize, const H: usize> Constraint<W, H> {
+    /// TODO: Docs
+    pub fn len(&self) -> usize {
+        self.variables.len()
+    }
+
+    /// TODO: Docs
+    pub fn is_empty(&self) -> bool {
+        self.variables.is_empty()
+    }
+
+    /// TODO: Docs
+    /// Maybe rename me?? Should actually be is_subset_OR_is_superset
+    pub fn is_superset_of(&self, other: &Constraint<W, H>) -> bool {
+        let mut a = self.variables.clone();
+        let mut b = other.variables.clone();
+        a.sort();
+        b.sort();
+
+        // TODO: OPTIMIZE ME LATER, IM SLOW
+        b.iter().all(|item| a.contains(item))
+        // let mut a_iter = a.iter();
+        // 'outer: for other_item in &b {
+        //     for item in a_iter.by_ref() {
+        //         if item == other_item {
+        //             // Should be break, but clippy actually maybe reports a
+        //             // false negative here
+        //             continue 'outer;
+        //         }
+        //     }
+        //     return false;
+        // }
+        // true
+    }
+
+    /// TODO: Docs
+    pub fn subtract(&mut self, other: &Constraint<W, H>) {
+        self.variables.retain(|v| !other.variables.contains(v));
+        self.label -= other.label;
+    }
+}
+
 impl<const W: usize, const H: usize> Debug for Constraint<W, H> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} = ", self.label)?;
@@ -42,15 +84,6 @@ impl<const W: usize, const H: usize> PartialEq for Constraint<W, H> {
         a.sort();
         b.sort();
         a == b && self.label == other.label
-    }
-}
-
-impl<const W: usize, const H: usize> std::hash::Hash for Constraint<W, H> {
-    fn hash<Hasher: std::hash::Hasher>(&self, state: &mut Hasher) {
-        let mut a = self.variables.clone();
-        a.sort();
-        a.hash(state);
-        self.label.hash(state);
     }
 }
 
@@ -121,9 +154,11 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
 }
 
 #[derive(Debug, Clone, Default)]
+/// TODO: Docs
 pub struct ConstraintSets<const W: usize, const H: usize>(Vec<CoupledConstraints<W, H>>);
 
 impl<const W: usize, const H: usize> ConstraintSets<W, H> {
+    /// TODO: Docs
     pub fn insert(&mut self, constraint: Constraint<W, H>) {
         // Returns mutably all the constraint sets that contain any of the
         // variables in the new constraints, and their indexes
@@ -164,30 +199,66 @@ impl<const W: usize, const H: usize> ConstraintSets<W, H> {
 #[derive(Debug, Clone, Default)]
 pub struct CoupledConstraints<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
-    pub constraints: HashSet<Constraint<W, H>>,
+    pub constraints: Vec<Constraint<W, H>>,
     /// List of all the variables that are in this set of coupled constraints
     pub variables: HashSet<Coord<W, H>>,
 }
 
 impl<const W: usize, const H: usize> CoupledConstraints<W, H> {
+    /// TODO: Docs
     pub fn from(constraint: Constraint<W, H>) -> CoupledConstraints<W, H> {
         CoupledConstraints {
             variables: HashSet::from_iter(constraint.variables.clone().into_iter()),
-            constraints: HashSet::from_iter([constraint].into_iter()),
+            constraints: vec![constraint],
         }
     }
 
+    /// TODO: Docs
     pub fn combine(
         &mut self,
         other: &mut CoupledConstraints<W, H>,
     ) -> &mut CoupledConstraints<W, H> {
         self.constraints.extend(other.constraints.iter().cloned());
         self.variables.extend(other.variables.iter().cloned());
+        self.constraints.sort();
+        self.constraints.dedup();
         self
     }
 
+    /// TODO: Docs
     pub fn insert(&mut self, constraint: Constraint<W, H>) {
         self.variables.extend(constraint.variables.iter());
-        self.constraints.insert(constraint);
+        if (constraint.label > 0 || !constraint.is_empty())
+            && !self.constraints.contains(&constraint)
+        {
+            self.constraints.push(constraint);
+            self.reduce();
+        }
+    }
+
+    /// TODO: Docs
+    pub fn reduce(&mut self) {
+        let mut edited = true;
+        while edited {
+            edited = false;
+            self.constraints.sort();
+            self.constraints.dedup();
+            self.constraints.sort_by_key(|i| i.len());
+
+            for smallest_idx in 0..self.constraints.len() {
+                let (smaller, others) = self.constraints.split_at_mut(smallest_idx + 1);
+                let smallest = &mut smaller[smaller.len() - 1];
+
+                for other in &mut *others {
+                    if other.len() > smallest.len() && other.is_superset_of(smallest) {
+                        other.subtract(smallest);
+                        edited = true;
+                    }
+                }
+                if edited {
+                    break;
+                }
+            }
+        }
     }
 }

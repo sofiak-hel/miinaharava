@@ -140,13 +140,20 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
     /// # Errors
     /// - [MinefieldError::TooManyMines] if the amount of mines is too large.
     pub fn generate(mines: u8) -> Result<Self, MinefieldError> {
+        let corners: Vec<Coord<W, H>> = vec![
+            Coord(0, 0),
+            Coord(W as u8 - 1, 0),
+            Coord(0, H as u8 - 1),
+            Coord(W as u8 - 1, H as u8 - 1),
+        ];
+
         let mut mine_indices = Matrix([[false; W]; H]);
         if mines as usize > W * H {
             Err(MinefieldError::TooManyMines)
         } else {
             for _ in 0..mines {
                 let mut coord = Coord::<W, H>::random();
-                while mine_indices.get(coord) {
+                while mine_indices.get(coord) || corners.contains(&coord) {
                     coord = Coord::random();
                 }
                 mine_indices.set(coord, true);
