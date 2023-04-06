@@ -15,32 +15,32 @@ pub enum Decision<const W: usize, const H: usize> {
     Reveal(Coord<W, H>),
 }
 
-/// Ponder the orb (orb being the [Minefield])
-///
-/// Looks at the minefield at the current state of things and returns a list of
-/// decisions based on it.
-pub fn ponder<const W: usize, const H: usize>(minefield: &Minefield<W, H>) -> Vec<Decision<W, H>> {
-    let mut first_ponder = true;
-    'outer: for row in minefield.field.iter() {
-        for cell in row {
-            if *cell != Cell::Hidden {
-                first_ponder = false;
-                break 'outer;
-            }
-        }
-    }
+// /// Ponder the orb (orb being the [Minefield])
+// ///
+// /// Looks at the minefield at the current state of things and returns a list of
+// /// decisions based on it.
+// pub fn ponder<const W: usize, const H: usize>(minefield: &Minefield<W, H>) -> Vec<Decision<W, H>> {
+//     let mut first_ponder = true;
+//     'outer: for row in minefield.field.iter() {
+//         for cell in row {
+//             if *cell != Cell::Hidden {
+//                 first_ponder = false;
+//                 break 'outer;
+//             }
+//         }
+//     }
 
-    if first_ponder {
-        vec![guess(minefield)]
-    } else {
-        let state = ConstaintSatisficationState::from(minefield);
-        let mut decisions = state.solve_trivial_cases().unwrap();
-        if decisions.is_empty() {
-            decisions.push(guess(minefield))
-        }
-        decisions
-    }
-}
+//     if first_ponder {
+//         vec![guess(minefield)]
+//     } else {
+//         let state = ConstaintSatisficationState::from(minefield);
+//         let mut decisions = state.solve_trivial_cases().unwrap();
+//         if decisions.is_empty() {
+//             decisions.push(guess(minefield))
+//         }
+//         decisions
+//     }
+// }
 
 /// Make a purely random guess. At least for now, this function is meant for use
 /// simply so that the game will never stagnate entirely.

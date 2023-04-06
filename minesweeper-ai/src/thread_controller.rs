@@ -13,10 +13,7 @@ use std::{
 
 use miinaharava::minefield::{GameState, Minefield, Reveal};
 
-use crate::{
-    ai::{ponder, Decision},
-    csp::ConstaintSatisficationState,
-};
+use crate::{ai::Decision, csp::ConstaintSatisficationState};
 
 /// Macro that is useful for measuring how long a certain expression took.
 macro_rules! measure {
@@ -171,13 +168,13 @@ impl StateWrapper {
         use crate::csp::ConstaintSatisficationState;
         match self {
             StateWrapper::Easy(s) => {
-                dbg!(ConstaintSatisficationState::from(&s.minefield));
+                dbg!(&s.csp_state);
             }
             StateWrapper::Intermediate(s) => {
-                dbg!(ConstaintSatisficationState::from(&s.minefield));
+                dbg!(&s.csp_state);
             }
             StateWrapper::Expert(s) => {
-                dbg!(ConstaintSatisficationState::from(&s.minefield));
+                dbg!(&s.csp_state);
             }
         };
     }

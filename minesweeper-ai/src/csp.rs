@@ -112,63 +112,6 @@ impl<const W: usize, const H: usize> Default for ConstaintSatisficationState<W, 
 }
 
 impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
-    /// Constructs a CPS-state from a given minefield. Goes through all labels
-    /// in the visual field and creates a constraint from them.
-    pub fn from(minefield: &Minefield<W, H>) -> Self {
-        let mut constraints = CoupledSets(Vec::with_capacity(W * H));
-
-        for (y, row) in minefield.field.iter().enumerate() {
-            for (x, cell) in row.iter().enumerate() {
-                if let Cell::Label(mut num) = cell {
-                    let mut neighbors = ArrayVec::new();
-                    for neighbor in Coord::<W, H>(x as u8, y as u8).neighbours().iter() {
-                        match minefield.field.get(*neighbor) {
-                            Cell::Flag => num -= 1,
-                            Cell::Hidden => neighbors.push(*neighbor),
-                            _ => {}
-                        };
-                    }
-                    if num > 0 || !neighbors.is_empty() {
-                        let constraint = Constraint {
-                            label: num,
-                            variables: neighbors,
-                        };
-                        constraints
-                            .insert(constraint, &mut Matrix([[CellContent::default(); W]; H]));
-                    }
-                }
-            }
-        }
-        ConstaintSatisficationState {
-            constraint_sets: constraints,
-            ..Default::default()
-        }
-    }
-
-    /// Solves trivial cases, meaning that it will reveal all variables that
-    /// have an obvious answer.
-    pub fn solve_trivial_cases(&self) -> Result<Vec<Decision<W, H>>, CSPError> {
-        let mut decisions = Vec::new();
-        for constraint_set in &self.constraint_sets.0 {
-            for constraint in &constraint_set.constraints {
-                if constraint.label as usize == constraint.variables.len() {
-                    for variable in &constraint.variables {
-                        decisions.push(Decision::Flag(*variable));
-                    }
-                }
-                if constraint.label == 0 {
-                    for variable in &constraint.variables {
-                        decisions.push(Decision::Reveal(*variable));
-                    }
-                }
-            }
-        }
-        decisions.sort();
-        decisions.dedup();
-
-        Ok(decisions)
-    }
-
     /// TODO: Docs
     pub fn ponder(
         &mut self,

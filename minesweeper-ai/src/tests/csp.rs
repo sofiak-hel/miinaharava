@@ -4,7 +4,7 @@ use arrayvec::ArrayVec;
 use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
 
 use crate::{
-    ai::{ponder, Decision},
+    ai::Decision,
     csp::{CellContent, ConstaintSatisficationState, Constraint, ConstraintSet},
 };
 
@@ -18,26 +18,26 @@ const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
     [false, true, false, true, false, false, false],
 ]);
 
-#[test]
-fn solve_trivial_field() {
-    let mut minefield = Minefield::<7, 7>::with_mines(TRIVIAL_MINES);
+// #[test]
+// fn solve_trivial_field() {
+//     let mut minefield = Minefield::<7, 7>::with_mines(TRIVIAL_MINES);
 
-    minefield.reveal(Coord(0, 0)).unwrap();
+//     minefield.reveal(Coord(0, 0)).unwrap();
 
-    let mut max_decisions = 20;
-    while minefield.game_state() == GameState::Pending && max_decisions > 0 {
-        let decisions = ponder(&minefield);
-        for decision in decisions {
-            match decision {
-                Decision::Flag(coord) => minefield.flag(coord),
-                Decision::Reveal(coord) => minefield.reveal(coord),
-            }
-            .ok();
-        }
-        max_decisions -= 1;
-    }
-    assert_eq!(minefield.game_state(), GameState::Victory)
-}
+//     let mut max_decisions = 20;
+//     while minefield.game_state() == GameState::Pending && max_decisions > 0 {
+//         let decisions = ponder(&minefield);
+//         for decision in decisions {
+//             match decision {
+//                 Decision::Flag(coord) => minefield.flag(coord),
+//                 Decision::Reveal(coord) => minefield.reveal(coord),
+//             }
+//             .ok();
+//         }
+//         max_decisions -= 1;
+//     }
+//     assert_eq!(minefield.game_state(), GameState::Victory)
+// }
 
 // #[test]
 // fn test_trivial_constraints() {
@@ -75,29 +75,27 @@ fn solve_trivial_field() {
 #[test]
 fn test_constraint_generation() {
     let mut minefield = Minefield::<7, 7>::with_mines(TRIVIAL_MINES);
-    minefield.reveal(Coord(0, 0)).unwrap();
+    let mut state = ConstaintSatisficationState::default();
+    let reveals = minefield.reveal(Coord(0, 0)).unwrap();
+    state.handle_reveals(reveals, &minefield);
 
-    let state = ConstaintSatisficationState::from(&minefield);
-    let expected = into_constraint_vec(&[
+    let mut expected = into_constraint_vec(&[
         (1, &[Coord(0, 3), Coord(1, 3)]),
-        (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
-        (1, &[Coord(0, 3), Coord(1, 3)]),
-        (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
-        (1, &[Coord(1, 3), Coord(2, 3), Coord(3, 3)]),
-        (1, &[Coord(2, 3), Coord(3, 3), Coord(4, 3)]),
-        (2, &[Coord(3, 3), Coord(4, 3), Coord(5, 3), Coord(5, 2)]),
-        (1, &[Coord(5, 2)]),
-        (1, &[Coord(5, 2), Coord(6, 2)]),
-        (1, &[Coord(5, 2), Coord(6, 2)]),
+        (1, &[Coord(1, 3), Coord(3, 3)]),
+        (1, &[Coord(3, 3), Coord(4, 3)]),
     ]);
+
+    expected.sort();
 
     let mut set = HashSet::new();
     set.extend(expected.iter().flat_map(|c| c.variables.clone()));
-    let mut expected_set = ConstraintSet {
+    let expected_set = ConstraintSet {
         constraints: expected,
         variables: set,
     };
-    expected_set.reduce();
+
+    dbg!(&expected_set.constraints);
+    dbg!(&state.constraint_sets);
 
     assert_eq!(*state.constraint_sets.0.get(0).unwrap(), expected_set);
 }
