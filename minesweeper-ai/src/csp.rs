@@ -3,7 +3,7 @@
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Cell, Coord, Minefield};
-use std::{collections::HashSet, fmt::Debug};
+use std::{collections::HashSet, fmt::Debug, ops::Index};
 
 use crate::ai::Decision;
 
@@ -13,7 +13,7 @@ use crate::ai::Decision;
 ///
 /// In concrete terms, variables are hidden unflagged cells and the label is how many
 /// mines are still undiscovered in said cells.
-#[derive(Clone, PartialOrd, Ord, Eq)]
+#[derive(Clone, PartialOrd, Ord, Eq, Default)]
 pub struct Constraint<const W: usize, const H: usize> {
     /// Value or label for the variables
     pub label: u8,
@@ -33,32 +33,35 @@ impl<const W: usize, const H: usize> Constraint<W, H> {
     }
 
     /// TODO: Docs
-    /// Maybe rename me?? Should actually be is_subset_OR_is_superset
     pub fn is_superset_of(&self, other: &Constraint<W, H>) -> bool {
-        let mut a = self.variables.clone();
-        let mut b = other.variables.clone();
-        a.sort();
-        b.sort();
+        if self.len() > other.len() {
+            let mut vars = self.variables.clone();
+            let mut other_vars = other.variables.clone();
+            vars.sort();
+            other_vars.sort();
 
-        // TODO: OPTIMIZE ME LATER, IM SLOW
-        b.iter().all(|item| a.contains(item))
-        // let mut a_iter = a.iter();
-        // 'outer: for other_item in &b {
-        //     for item in a_iter.by_ref() {
-        //         if item == other_item {
-        //             // Should be break, but clippy actually maybe reports a
-        //             // false negative here
-        //             continue 'outer;
-        //         }
-        //     }
-        //     return false;
-        // }
-        // true
+            let mut var_iter = vars.iter();
+            'outer: for other_var in other_vars {
+                for var in var_iter.by_ref() {
+                    if *var == other_var {
+                        continue 'outer;
+                    }
+                }
+                return false;
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// TODO: Docs
     pub fn subtract(&mut self, other: &Constraint<W, H>) {
-        self.variables.retain(|v| !other.variables.contains(v));
+        for other_var in &other.variables {
+            if let Some(idx) = self.variables.iter().position(|v| v == other_var) {
+                self.variables.remove(idx);
+            }
+        }
         self.label -= other.label;
     }
 }
@@ -258,6 +261,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                 if !smallest.is_empty() {
                     for other in &mut *others {
                         if other.len() > smallest.len() && other.is_superset_of(smallest) {
+                            dbg!(&other, &smallest);
                             other.subtract(smallest);
                             edited = true;
                         }

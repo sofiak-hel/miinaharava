@@ -103,42 +103,129 @@ fn test_constraint_generation() {
 }
 
 #[test]
-fn test_reduce() {
-    let initial = into_constraint_vec(&[
-        (1, &[Coord(0, 3), Coord(1, 3)]),
-        (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
-        (1, &[Coord(0, 3), Coord(1, 3)]),
-        (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
-        (1, &[Coord(1, 3), Coord(2, 3), Coord(3, 3)]),
-        (1, &[Coord(2, 3), Coord(3, 3), Coord(4, 3)]),
-        (2, &[Coord(3, 3), Coord(4, 3), Coord(5, 3), Coord(5, 2)]),
-        (1, &[Coord(5, 2)]),
-        (1, &[Coord(5, 2), Coord(6, 2)]),
-        (2, &[Coord(5, 2), Coord(6, 2), Coord(7, 2)]),
-    ]);
-    let mut expected = into_constraint_vec(&[
-        (1, &[Coord(0, 3), Coord(1, 3)]),
-        (0, &[Coord(2, 3)]),
-        (1, &[Coord(1, 3), Coord(3, 3)]),
-        (1, &[Coord(3, 3), Coord(4, 3)]),
-        (0, &[Coord(5, 3)]),
-        (1, &[Coord(5, 2)]),
-        (0, &[Coord(6, 2)]),
-        (1, &[Coord(7, 2)]),
-    ]);
-    expected.sort();
+fn test_known_reduces() {
+    let known = vec![
+        (
+            into_constraint_vec(&[
+                (1, &[Coord(0, 3), Coord(1, 3)]),
+                (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
+                (1, &[Coord(0, 3), Coord(1, 3)]),
+                (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
+                (1, &[Coord(1, 3), Coord(2, 3), Coord(3, 3)]),
+                (1, &[Coord(2, 3), Coord(3, 3), Coord(4, 3)]),
+                (2, &[Coord(3, 3), Coord(4, 3), Coord(5, 3), Coord(5, 2)]),
+                (1, &[Coord(5, 2)]),
+                (1, &[Coord(5, 2), Coord(6, 2)]),
+                (2, &[Coord(5, 2), Coord(6, 2), Coord(7, 2)]),
+            ]),
+            into_constraint_vec(&[
+                (1, &[Coord(0, 3), Coord(1, 3)]),
+                (0, &[Coord(2, 3)]),
+                (1, &[Coord(1, 3), Coord(3, 3)]),
+                (1, &[Coord(3, 3), Coord(4, 3)]),
+                (0, &[Coord(5, 3)]),
+                (1, &[Coord(5, 2)]),
+                (0, &[Coord(6, 2)]),
+                (1, &[Coord(7, 2)]),
+            ]),
+        ),
+        (
+            into_constraint_vec(&[
+                (1, &[Coord(5, 2)]),
+                (1, &[Coord(5, 2), Coord(6, 2)]),
+                (2, &[Coord(5, 2), Coord(6, 2), Coord(7, 2)]),
+            ]),
+            into_constraint_vec(&[
+                (1, &[Coord(5, 2)]),
+                (0, &[Coord(6, 2)]),
+                (1, &[Coord(7, 2)]),
+            ]),
+        ),
+        (
+            into_constraint_vec(&[
+                (1, &[]),
+                (1, &[Coord(5, 2), Coord(6, 2)]),
+                (2, &[Coord(5, 2), Coord(6, 2), Coord(7, 2)]),
+            ]),
+            into_constraint_vec(&[
+                (1, &[]),
+                (1, &[Coord(5, 2), Coord(6, 2)]),
+                (1, &[Coord(7, 2)]),
+            ]),
+        ),
+    ];
 
-    let mut set = HashSet::new();
-    set.extend(initial.iter().flat_map(|c| c.variables.clone()));
-    let mut initial_set = ConstraintSet {
-        constraints: initial,
-        variables: set,
-    };
-    initial_set.reduce();
-    let mut initial_reduced = initial_set.constraints;
-    initial_reduced.sort();
+    for known_reduces in known {
+        let initial = known_reduces.0;
+        let mut expected = known_reduces.1;
 
-    assert_eq!(initial_reduced, expected);
+        expected.sort();
+
+        let mut set = HashSet::new();
+        set.extend(initial.iter().flat_map(|c| c.variables.clone()));
+        let mut initial_set = ConstraintSet {
+            constraints: initial,
+            variables: set,
+        };
+        initial_set.reduce();
+        let mut initial_reduced = initial_set.constraints;
+        initial_reduced.sort();
+
+        assert_eq!(initial_reduced, expected);
+    }
+}
+
+#[test]
+fn test_random_reduces() {
+    // Do all of this 100 times for good measure (random is hard)
+    for _ in 0..200 {
+        // 1. First generate some random amount of valid constraints
+        // (valid, as in the labels in the set always correspond correctly)
+        let mine_amount = black_box(rand::random::<u8>()) % 50;
+        let mut random_mine_coords = vec![Coord::<10, 10>(0, 0); mine_amount as usize];
+        random_mine_coords.fill_with(Coord::random);
+
+        let amount = black_box(rand::random::<u8>() % 70 + 20);
+        let mut vec = vec![Constraint::<10, 10>::default(); amount as usize];
+        vec.fill_with(|| {
+            let amount = black_box(rand::random::<u8>() % 8 + 1);
+            let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
+            let mut variables = ArrayVec::try_from(&*vec).unwrap();
+            variables.fill_with(Coord::random);
+            Constraint {
+                label: variables
+                    .iter()
+                    .filter(|v| random_mine_coords.contains(*v))
+                    .count() as u8,
+                variables,
+            }
+        });
+        dbg!(&vec);
+
+        // 2. Generate a ConstraintSet from them and reduce the set
+        let mut set = HashSet::new();
+        set.extend(vec.iter().flat_map(|c| c.variables.clone()));
+        let mut constraint_set = ConstraintSet {
+            constraints: vec,
+            variables: set,
+        };
+        constraint_set.reduce();
+
+        // 3. Make sure no two constraints are supersets of eachother
+        let constraints: Vec<(usize, Constraint<10, 10>)> = constraint_set
+            .constraints
+            .iter()
+            .cloned()
+            .enumerate()
+            .collect();
+
+        constraint_set.constraints.iter().enumerate().all(|(i, c)| {
+            constraints
+                .iter()
+                .filter(|(variable_i, _)| *variable_i != i)
+                .all(|(_, c2)| !c2.is_superset_of(c) && !c.is_superset_of(c2))
+        });
+    }
 }
 
 fn into_constraint_vec(array: &[(u8, &[Coord<7, 7>])]) -> Vec<Constraint<7, 7>> {
