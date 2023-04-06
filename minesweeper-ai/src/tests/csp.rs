@@ -18,26 +18,28 @@ const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
     [false, true, false, true, false, false, false],
 ]);
 
-// #[test]
-// fn solve_trivial_field() {
-//     let mut minefield = Minefield::<7, 7>::with_mines(TRIVIAL_MINES);
+#[test]
+fn solve_trivial_field() {
+    let mut minefield = Minefield::<7, 7>::with_mines(TRIVIAL_MINES);
+    let mut state = ConstraintSatisficationState::<7, 7>::default();
 
-//     minefield.reveal(Coord(0, 0)).unwrap();
+    let mut reveals = minefield.reveal(Coord(0, 0)).unwrap();
 
-//     let mut max_decisions = 20;
-//     while minefield.game_state() == GameState::Pending && max_decisions > 0 {
-//         let decisions = ponder(&minefield);
-//         for decision in decisions {
-//             match decision {
-//                 Decision::Flag(coord) => minefield.flag(coord),
-//                 Decision::Reveal(coord) => minefield.reveal(coord),
-//             }
-//             .ok();
-//         }
-//         max_decisions -= 1;
-//     }
-//     assert_eq!(minefield.game_state(), GameState::Victory)
-// }
+    let mut max_decisions = 20;
+    while minefield.game_state() == GameState::Pending && max_decisions > 0 {
+        let decisions = state.ponder(reveals.drain(..).collect(), &minefield);
+        for decision in decisions {
+            if let Some(res) = match decision {
+                Decision::Flag(coord) => minefield.flag(coord).ok(),
+                Decision::Reveal(coord) => minefield.reveal(coord).ok(),
+            } {
+                reveals.extend(res);
+            }
+        }
+        max_decisions -= 1;
+    }
+    assert_eq!(minefield.game_state(), GameState::Victory)
+}
 
 #[test]
 fn test_trivial_constraints() {
