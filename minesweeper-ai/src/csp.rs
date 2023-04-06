@@ -3,7 +3,7 @@
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Cell, Coord, Minefield};
-use std::{collections::HashSet, fmt::Debug, ops::Index};
+use std::{collections::HashSet, fmt::Debug};
 
 use crate::ai::Decision;
 

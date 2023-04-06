@@ -182,8 +182,8 @@ fn test_random_reduces() {
         // 1. First generate some random amount of valid constraints
         // (valid, as in the labels in the set always correspond correctly)
         let mine_amount = black_box(rand::random::<u8>()) % 50;
-        let mut random_mine_coords = vec![Coord::<10, 10>(0, 0); mine_amount as usize];
-        random_mine_coords.fill_with(Coord::random);
+        let mut mine_coords = vec![Coord::<10, 10>(0, 0); mine_amount as usize];
+        mine_coords.fill_with(Coord::random);
 
         let amount = black_box(rand::random::<u8>() % 70 + 20);
         let mut vec = vec![Constraint::<10, 10>::default(); amount as usize];
@@ -195,7 +195,7 @@ fn test_random_reduces() {
             Constraint {
                 label: variables
                     .iter()
-                    .filter(|v| random_mine_coords.contains(*v))
+                    .filter(|v| mine_coords.contains(*v))
                     .count() as u8,
                 variables,
             }
@@ -211,20 +211,22 @@ fn test_random_reduces() {
         };
         constraint_set.reduce();
 
-        // 3. Make sure no two constraints are supersets of eachother
-        let constraints: Vec<(usize, Constraint<10, 10>)> = constraint_set
-            .constraints
-            .iter()
-            .cloned()
-            .enumerate()
-            .collect();
+        // 3. Make sure no two constraints can be further reduced
+        for (i, c1) in constraint_set.constraints.iter().enumerate() {
+            for (j, c2) in constraint_set.constraints.iter().enumerate() {
+                if i != j {
+                    assert!(!c2.is_superset_of(c1) && !c1.is_superset_of(c2))
+                }
+            }
 
-        constraint_set.constraints.iter().enumerate().all(|(i, c)| {
-            constraints
+            // Also make sure c1 is still a valid constraint
+            let true_value = c1
+                .variables
                 .iter()
-                .filter(|(variable_i, _)| *variable_i != i)
-                .all(|(_, c2)| !c2.is_superset_of(c) && !c.is_superset_of(c2))
-        });
+                .filter(|v| mine_coords.contains(v))
+                .count();
+            assert_eq!(true_value as u8, c1.label);
+        }
     }
 }
 
