@@ -78,43 +78,19 @@ fn test_constraint_generation() {
     minefield.reveal(Coord(0, 0)).unwrap();
 
     let state = ConstaintSatisficationState::from(&minefield);
-    let expected: Vec<Constraint<7, 7>> = vec![
-        Constraint {
-            label: 1,
-            variables: ArrayVec::try_from(&[Coord(0, 3), Coord(1, 3)][..]).unwrap(),
-        },
-        Constraint {
-            label: 1,
-            variables: ArrayVec::try_from(&[Coord(0, 3), Coord(1, 3), Coord(2, 3)][..]).unwrap(),
-        },
-        Constraint {
-            label: 1,
-            variables: ArrayVec::try_from(&[Coord(1, 3), Coord(2, 3), Coord(3, 3)][..]).unwrap(),
-        },
-        Constraint {
-            label: 1,
-            variables: ArrayVec::try_from(&[Coord(2, 3), Coord(3, 3), Coord(4, 3)][..]).unwrap(),
-        },
-        Constraint {
-            label: 2,
-            variables: ArrayVec::try_from(
-                &[Coord(3, 3), Coord(4, 3), Coord(5, 3), Coord(5, 2)][..],
-            )
-            .unwrap(),
-        },
-        Constraint {
-            label: 1,
-            variables: ArrayVec::try_from(&[Coord(5, 2)][..]).unwrap(),
-        },
-        Constraint {
-            label: 1,
-            variables: ArrayVec::try_from(&[Coord(5, 2), Coord(6, 2)][..]).unwrap(),
-        },
-        Constraint {
-            label: 1,
-            variables: ArrayVec::try_from(&[Coord(5, 2), Coord(6, 2)][..]).unwrap(),
-        },
-    ];
+    let expected = into_constraint_vec(&[
+        (1, &[Coord(0, 3), Coord(1, 3)]),
+        (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
+        (1, &[Coord(0, 3), Coord(1, 3)]),
+        (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
+        (1, &[Coord(1, 3), Coord(2, 3), Coord(3, 3)]),
+        (1, &[Coord(2, 3), Coord(3, 3), Coord(4, 3)]),
+        (2, &[Coord(3, 3), Coord(4, 3), Coord(5, 3), Coord(5, 2)]),
+        (1, &[Coord(5, 2)]),
+        (1, &[Coord(5, 2), Coord(6, 2)]),
+        (1, &[Coord(5, 2), Coord(6, 2)]),
+    ]);
+
     let mut set = HashSet::new();
     set.extend(expected.iter().flat_map(|c| c.variables.clone()));
     let mut expected_set = ConstraintSet {
@@ -124,4 +100,53 @@ fn test_constraint_generation() {
     expected_set.reduce();
 
     assert_eq!(*state.constraints.0.get(0).unwrap(), expected_set);
+}
+
+#[test]
+fn test_reduce() {
+    let initial = into_constraint_vec(&[
+        (1, &[Coord(0, 3), Coord(1, 3)]),
+        (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
+        (1, &[Coord(0, 3), Coord(1, 3)]),
+        (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
+        (1, &[Coord(1, 3), Coord(2, 3), Coord(3, 3)]),
+        (1, &[Coord(2, 3), Coord(3, 3), Coord(4, 3)]),
+        (2, &[Coord(3, 3), Coord(4, 3), Coord(5, 3), Coord(5, 2)]),
+        (1, &[Coord(5, 2)]),
+        (1, &[Coord(5, 2), Coord(6, 2)]),
+        (2, &[Coord(5, 2), Coord(6, 2), Coord(7, 2)]),
+    ]);
+    let mut expected = into_constraint_vec(&[
+        (1, &[Coord(0, 3), Coord(1, 3)]),
+        (0, &[Coord(2, 3)]),
+        (1, &[Coord(1, 3), Coord(3, 3)]),
+        (1, &[Coord(3, 3), Coord(4, 3)]),
+        (0, &[Coord(5, 3)]),
+        (1, &[Coord(5, 2)]),
+        (0, &[Coord(6, 2)]),
+        (1, &[Coord(7, 2)]),
+    ]);
+    expected.sort();
+
+    let mut set = HashSet::new();
+    set.extend(initial.iter().flat_map(|c| c.variables.clone()));
+    let mut initial_set = ConstraintSet {
+        constraints: initial,
+        variables: set,
+    };
+    initial_set.reduce();
+    let mut initial_reduced = initial_set.constraints;
+    initial_reduced.sort();
+
+    assert_eq!(initial_reduced, expected);
+}
+
+fn into_constraint_vec(array: &[(u8, &[Coord<7, 7>])]) -> Vec<Constraint<7, 7>> {
+    array
+        .iter()
+        .map(|i| Constraint {
+            label: i.0,
+            variables: ArrayVec::try_from(i.1).unwrap(),
+        })
+        .collect()
 }
