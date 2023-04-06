@@ -209,11 +209,10 @@ fn test_random_reduces() {
 }
 
 #[test]
-fn test_trivial_cases_2() {
+fn test_trivial_cases() {
     for _ in 0..50 {
         for multiplier in 0..=1 {
             let mut known = Matrix([[CellContent::Unknown; 10]; 10]);
-            let mut set = ConstraintSet::default();
             // 1. Generate some random variables
             let amount = black_box(rand::random::<u8>() % 9);
             let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
@@ -223,14 +222,16 @@ fn test_trivial_cases_2() {
             // 2. Insert variables into the constrait, calculate label
             // multiplier = 0 = all of them are empty
             // multiplier = 1 = all of them are mines
-            set.insert(
-                Constraint {
+            let mut set = HashSet::new();
+            set.extend(variables.iter());
+            let mut constraint_set = ConstraintSet {
+                constraints: vec![Constraint {
                     label: black_box(amount * multiplier),
                     variables: variables.clone(),
-                },
-                &mut known,
-            );
-            dbg!(&set);
+                }],
+                variables: set,
+            };
+            dbg!(&constraint_set);
 
             // 3. Make sure returned decisions are as expected
             let mut expected = variables
@@ -242,7 +243,7 @@ fn test_trivial_cases_2() {
                 .collect::<Vec<_>>();
             expected.sort();
             expected.dedup();
-            let mut decisions = set.solve_trivial_cases_2(&mut known);
+            let mut decisions = constraint_set.solve_trivial_cases(&mut known);
             decisions.sort();
             decisions.dedup();
             assert_eq!(decisions, expected);
@@ -261,7 +262,7 @@ fn test_trivial_cases_2() {
 
             // 5. Make sure all constraints were processed and removed, they
             //    were trivial.
-            assert_eq!(set.constraints.len(), 0);
+            assert_eq!(constraint_set.constraints.len(), 0);
         }
     }
 }
@@ -291,14 +292,14 @@ fn test_trivial_on_nontrivial() {
         // 3. Make sure trivial_solver does nothing with these constraints
         let old_length = set.constraints.len();
         dbg!(&set);
-        let decisions = set.solve_trivial_cases_2(&mut known);
+        let decisions = set.solve_trivial_cases(&mut known);
 
         assert!(decisions.is_empty());
         assert_eq!(known, Matrix([[CellContent::Unknown; 10]; 10]));
         assert_eq!(set.constraints.len(), old_length);
 
         // 4. Make sure trivial solver is idempotent
-        let decisions = set.solve_trivial_cases_2(&mut known);
+        let decisions = set.solve_trivial_cases(&mut known);
 
         assert!(decisions.is_empty());
         assert_eq!(known, Matrix([[CellContent::Unknown; 10]; 10]));

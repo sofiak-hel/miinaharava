@@ -176,7 +176,7 @@ impl<const W: usize, const H: usize> ConstraintSatisficationState<W, H> {
         let mut prev_decisions = decisions.len();
         while {
             for set in &mut self.constraint_sets.0 {
-                decisions.extend(set.solve_trivial_cases_2(&mut self.known_fields));
+                decisions.extend(set.solve_trivial_cases(&mut self.known_fields));
                 decisions.extend(set.clear_known_variables(&self.known_fields));
                 set.reduce();
             }
@@ -354,7 +354,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     /// Solves trivial cases, meaning that it will reveal all variables that
     /// have an obvious answer.
     #[must_use]
-    pub fn solve_trivial_cases_2(
+    pub fn solve_trivial_cases(
         &mut self,
         known_field: &mut KnownMinefield<W, H>,
     ) -> Vec<Decision<W, H>> {
