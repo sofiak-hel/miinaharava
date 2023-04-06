@@ -35,21 +35,7 @@ impl<const W: usize, const H: usize> Constraint<W, H> {
     /// TODO: Docs
     pub fn is_superset_of(&self, other: &Constraint<W, H>) -> bool {
         if self.len() > other.len() {
-            let mut vars = self.variables.clone();
-            let mut other_vars = other.variables.clone();
-            vars.sort();
-            other_vars.sort();
-
-            let mut var_iter = vars.iter();
-            'outer: for other_var in other_vars {
-                for var in var_iter.by_ref() {
-                    if *var == other_var {
-                        continue 'outer;
-                    }
-                }
-                return false;
-            }
-            true
+            other.variables.iter().all(|v| self.variables.contains(v))
         } else {
             false
         }
@@ -172,6 +158,7 @@ impl<const W: usize, const H: usize> ConstraintSatisficationState<W, H> {
             }
             set.reduce();
         }
+        self.constraint_sets.check_splits();
 
         let mut prev_decisions = decisions.len();
         while {
@@ -183,6 +170,7 @@ impl<const W: usize, const H: usize> ConstraintSatisficationState<W, H> {
                 }
                 decisions.extend(res);
             }
+            self.constraint_sets.check_splits();
             decisions.len() != prev_decisions
         } {
             prev_decisions = decisions.len()
@@ -261,6 +249,15 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
 
         decisions
     }
+
+    /// TODO: Docs
+    pub fn check_splits(&mut self) {
+        let mut new_vec = Vec::new();
+        while let Some(set) = self.0.pop() {
+            new_vec.extend(set.check_splits());
+        }
+        self.0 = new_vec;
+    }
 }
 
 /// Coupled Constraints
@@ -289,6 +286,38 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         self.constraints.sort();
         self.constraints.dedup();
         self
+    }
+
+    /// TOOD: Docs
+    pub fn check_splits(self) -> Vec<ConstraintSet<W, H>> {
+        let ConstraintSet {
+            mut constraints,
+            variables,
+        } = self;
+
+        let mut sets: Vec<ConstraintSet<W, H>> = Vec::with_capacity(10);
+
+        'outer: while let Some(constraint) = constraints.pop() {
+            for set in &mut sets {
+                if constraint
+                    .variables
+                    .iter()
+                    .any(|v| set.variables.contains(v))
+                {
+                    set.variables.extend(constraint.variables.iter());
+                    set.constraints.push(constraint);
+                    continue 'outer;
+                }
+            }
+            let mut variables = HashSet::with_capacity(variables.len());
+            variables.extend(constraint.variables.iter());
+            sets.push(ConstraintSet {
+                constraints: vec![constraint],
+                variables,
+            })
+        }
+
+        sets
     }
 
     /// TODO: Docs
@@ -397,8 +426,6 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         let mut edited = true;
         while edited {
             edited = false;
-            self.constraints.sort();
-            self.constraints.dedup();
             self.constraints.sort_by_key(|i| i.len());
 
             for smallest_idx in 0..self.constraints.len() {
@@ -420,5 +447,8 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                 }
             }
         }
+
+        self.constraints.sort();
+        self.constraints.dedup();
     }
 }
