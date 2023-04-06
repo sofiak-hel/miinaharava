@@ -254,6 +254,35 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         }
     }
 
+    /// TODO: Docs
+    pub fn clear_known_variables(
+        &mut self,
+        known_field: &KnownMinefield<W, H>,
+    ) -> Result<Vec<Decision<W, H>>, CSPError> {
+        let mut decisions = Vec::new();
+        for var in self.variables.clone() {
+            if let CellContent::Known(val) = known_field.get(var) {
+                for constraint in self.constraints.iter_mut() {
+                    while let Some(idx) = constraint.variables.iter().position(|v| *v == var) {
+                        constraint.variables.remove(idx);
+                        constraint.label -= val as u8;
+                    }
+                }
+
+                self.variables.remove(&var);
+                if val {
+                    decisions.push(Decision::Flag(var));
+                } else {
+                    decisions.push(Decision::Reveal(var));
+                }
+            }
+        }
+        decisions.sort();
+        decisions.dedup();
+
+        Ok(decisions)
+    }
+
     /// Solves trivial cases, meaning that it will reveal all variables that
     /// have an obvious answer.
     pub fn solve_trivial_cases_2_electric_boogaloo(
