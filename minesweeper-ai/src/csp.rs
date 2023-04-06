@@ -246,9 +246,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     /// TODO: Docs
     pub fn insert(&mut self, constraint: Constraint<W, H>) {
         self.variables.extend(constraint.variables.iter());
-        if (constraint.label > 0 || !constraint.is_empty())
-            && !self.constraints.contains(&constraint)
-        {
+        if !constraint.is_empty() && !self.constraints.contains(&constraint) {
             self.constraints.push(constraint);
             self.reduce();
         }
@@ -258,7 +256,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     pub fn clear_known_variables(
         &mut self,
         known_field: &KnownMinefield<W, H>,
-    ) -> Result<Vec<Decision<W, H>>, CSPError> {
+    ) -> Vec<Decision<W, H>> {
         let mut decisions = Vec::new();
         for var in self.variables.clone() {
             if let CellContent::Known(val) = known_field.get(var) {
@@ -286,7 +284,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         decisions.sort();
         decisions.dedup();
 
-        Ok(decisions)
+        decisions
     }
 
     /// Solves trivial cases, meaning that it will reveal all variables that
@@ -294,7 +292,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     pub fn solve_trivial_cases_2_electric_boogaloo(
         &mut self,
         known_field: &mut KnownMinefield<W, H>,
-    ) -> Result<Vec<Decision<W, H>>, CSPError> {
+    ) -> Vec<Decision<W, H>> {
         let mut decisions = Vec::new();
         let mut idx = 0;
         while let Some(constraint) = self.constraints.get(idx) {
@@ -317,7 +315,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         decisions.sort();
         decisions.dedup();
 
-        Ok(decisions)
+        decisions
     }
 
     /// TODO: Docs

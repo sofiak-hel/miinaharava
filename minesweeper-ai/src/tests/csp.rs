@@ -181,34 +181,9 @@ fn test_random_reduces() {
     for _ in 0..200 {
         // 1. First generate some random amount of valid constraints
         // (valid, as in the labels in the set always correspond correctly)
-        let mine_amount = black_box(rand::random::<u8>()) % 50;
-        let mut mine_coords = vec![Coord::<10, 10>(0, 0); mine_amount as usize];
-        mine_coords.fill_with(Coord::random);
+        let (mut constraint_set, mine_coords) = generate_valid_constraints(50);
+        dbg!(&constraint_set);
 
-        let amount = black_box(rand::random::<u8>() % 70 + 20);
-        let mut vec = vec![Constraint::<10, 10>::default(); amount as usize];
-        vec.fill_with(|| {
-            let amount = black_box(rand::random::<u8>() % 8 + 1);
-            let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
-            let mut variables = ArrayVec::try_from(&*vec).unwrap();
-            variables.fill_with(Coord::random);
-            Constraint {
-                label: variables
-                    .iter()
-                    .filter(|v| mine_coords.contains(*v))
-                    .count() as u8,
-                variables,
-            }
-        });
-        dbg!(&vec);
-
-        // 2. Generate a ConstraintSet from them and reduce the set
-        let mut set = HashSet::new();
-        set.extend(vec.iter().flat_map(|c| c.variables.clone()));
-        let mut constraint_set = ConstraintSet {
-            constraints: vec,
-            variables: set,
-        };
         constraint_set.reduce();
 
         // 3. Make sure no two constraints can be further reduced
@@ -238,18 +213,16 @@ fn test_random_reduces() {
 #[test]
 fn test_trivial_cases_2() {
     for _ in 0..50 {
-        // multiplier is 0 = should reveal all constraints
-        // 1 = should flag all constraints
         for multiplier in 0..=1 {
             let mut known = Matrix([[CellContent::Unknown; 10]; 10]);
             let mut set = ConstraintSet::default();
-            // Generate some random variables
+            // 1. Generate some random variables
             let amount = black_box(rand::random::<u8>() % 9);
             let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
             let mut variables = ArrayVec::try_from(&*vec).unwrap();
             variables.fill_with(Coord::random);
 
-            // Insert variables into the constrait
+            // 2. Insert variables into the constrait, calculate label
             // multiplier = 0 = all of them are empty
             // multiplier = 1 = all of them are mines
             set.insert(Constraint {
@@ -257,11 +230,8 @@ fn test_trivial_cases_2() {
                 variables: variables.clone(),
             });
             dbg!(&set);
-            let mut decisions = set
-                .solve_trivial_cases_2_electric_boogaloo(&mut known)
-                .unwrap();
-            decisions.sort();
 
+            // 3. Make sure returned decisions are as expected
             let mut expected = variables
                 .iter()
                 .map(|v| match multiplier {
@@ -271,8 +241,11 @@ fn test_trivial_cases_2() {
                 .collect::<Vec<_>>();
             expected.sort();
             expected.dedup();
+            let decisions = set.solve_trivial_cases_2_electric_boogaloo(&mut known);
             assert_eq!(decisions, expected);
 
+            // 4. Make sure the correct cells got marked as known, and no other
+            //    cells were touched.
             for (y, row) in known.iter().enumerate() {
                 for (x, cell) in row.iter().enumerate() {
                     if variables.contains(&Coord(x as u8, y as u8)) {
@@ -283,6 +256,8 @@ fn test_trivial_cases_2() {
                 }
             }
 
+            // 5. Make sure all constraints were processed and removed, they
+            //    were trivial.
             assert_eq!(set.constraints.len(), 0);
         }
     }
@@ -293,30 +268,102 @@ fn test_trivial_on_nontrivial() {
     for _ in 0..100 {
         let mut known = Matrix([[CellContent::Unknown; 10]; 10]);
         let mut set = ConstraintSet::default();
-        // Generate some random variables
+
+        // 1. Generate some random variables
         let amount = black_box(rand::random::<u8>() % 9);
         let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
         let mut variables = ArrayVec::try_from(&*vec).unwrap();
         variables.fill_with(Coord::random);
 
-        // Generate constraints that always have a different label than the
+        // 2. Generate constraints that always have a different label than the
         // number of variables thus making them nontrivial
         set.insert(Constraint {
             label: black_box((rand::random::<u8>() % 100 + 9) ^ amount),
             variables: variables.clone(),
         });
 
-        // Make sure trivial_solver does nothing with these constraints
+        // 3. Make sure trivial_solver does nothing with these constraints
         let old_length = set.constraints.len();
         dbg!(&set);
-        let decisions = set
-            .solve_trivial_cases_2_electric_boogaloo(&mut known)
-            .unwrap();
+        let decisions = set.solve_trivial_cases_2_electric_boogaloo(&mut known);
+
         assert!(decisions.is_empty());
-
         assert_eq!(known, Matrix([[CellContent::Unknown; 10]; 10]));
-
         assert_eq!(set.constraints.len(), old_length);
+
+        // 4. Make sure trivial solver is idempotent
+        let decisions = set.solve_trivial_cases_2_electric_boogaloo(&mut known);
+
+        assert!(decisions.is_empty());
+        assert_eq!(known, Matrix([[CellContent::Unknown; 10]; 10]));
+        assert_eq!(set.constraints.len(), old_length);
+    }
+}
+
+#[test]
+fn test_clearing_known_variables() {
+    for _ in 0..1000 {
+        let (mut set, mine_coords) = generate_valid_constraints(50);
+        dbg!(&set);
+
+        let mut known = Matrix([[CellContent::Unknown; 10]; 10]);
+        // 1. Reveal about 30% of the field as known to the function
+        let mut revealed = Vec::new();
+        for y in 0..10 {
+            for x in 0..10 {
+                // about 30% chance
+                if rand::random::<u8>() > 176 {
+                    let coord = Coord(x, y);
+                    known.set(coord, CellContent::Known(mine_coords.contains(&coord)));
+                    revealed.push(coord);
+                }
+            }
+        }
+
+        // 2. Make sure the returned decisions are as expected
+        let mut expected = Vec::new();
+        for coord in &revealed {
+            if set.variables.contains(coord) {
+                match known.get(*coord) {
+                    CellContent::Known(true) => expected.push(Decision::Flag(*coord)),
+                    CellContent::Known(false) => expected.push(Decision::Reveal(*coord)),
+                    CellContent::Unknown => {}
+                }
+            }
+        }
+        expected.sort();
+        expected.dedup();
+
+        let decisions = set.clear_known_variables(&known);
+        assert_eq!(decisions, expected);
+
+        // 3. Make sure all revealed fields are actually removed
+        for coord in &revealed {
+            if let CellContent::Known(_) = known.get(*coord) {
+                let true_variables: Vec<Coord<10, 10>> = set
+                    .constraints
+                    .iter()
+                    .flat_map(|c| c.variables.clone())
+                    .collect();
+                assert!(!set.variables.contains(coord));
+                assert!(!true_variables.contains(coord));
+            }
+        }
+
+        // 4. Also make sure all constraints are still valid
+        for constraint in &set.constraints {
+            let true_value = constraint
+                .variables
+                .iter()
+                .filter(|v| mine_coords.contains(v))
+                .count();
+            assert_eq!(true_value as u8, constraint.label);
+        }
+
+        // 5. Make sure clearing known variables is idempotent
+        let old_set = set.clone();
+        set.clear_known_variables(&known);
+        assert_eq!(old_set, set);
     }
 }
 
@@ -328,4 +375,37 @@ fn into_constraint_vec(array: &[(u8, &[Coord<7, 7>])]) -> Vec<Constraint<7, 7>> 
             variables: ArrayVec::try_from(i.1).unwrap(),
         })
         .collect()
+}
+
+fn generate_valid_constraints(mine_cap: u8) -> (ConstraintSet<10, 10>, Vec<Coord<10, 10>>) {
+    // Generate a random set of mines
+    let mine_amount = black_box(rand::random::<u8>()) % mine_cap;
+    let mut mine_coords = vec![Coord::<10, 10>(0, 0); mine_amount as usize];
+    mine_coords.fill_with(Coord::random);
+
+    // Generate a random amount of constraints
+    let amount = black_box(rand::random::<u8>() % 70 + 20);
+    let mut vec = vec![Constraint::<10, 10>::default(); amount as usize];
+    vec.fill_with(|| {
+        let amount = black_box(rand::random::<u8>() % 8 + 1);
+        let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
+        let mut variables = ArrayVec::try_from(&*vec).unwrap();
+        variables.fill_with(Coord::random);
+        Constraint {
+            // Make sure label is always correct
+            label: variables
+                .iter()
+                .filter(|v| mine_coords.contains(*v))
+                .count() as u8,
+            variables,
+        }
+    });
+    // Actually add create the constraint set
+    let mut set = HashSet::new();
+    set.extend(vec.iter().flat_map(|c| c.variables.clone()));
+    let constraint_set = ConstraintSet {
+        constraints: vec,
+        variables: set,
+    };
+    (constraint_set, mine_coords)
 }
