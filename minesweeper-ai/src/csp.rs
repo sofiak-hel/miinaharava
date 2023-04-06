@@ -334,7 +334,10 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                 if !smallest.is_empty() {
                     for other in &mut *others {
                         if other.len() > smallest.len() && other.is_superset_of(smallest) {
-                            dbg!(&other, &smallest);
+                            #[cfg(test)]
+                            {
+                                dbg!(&other, &smallest);
+                            }
                             other.subtract(smallest);
                             edited = true;
                         }
