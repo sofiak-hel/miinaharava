@@ -4,7 +4,7 @@
 use miinaharava::minefield::{Cell, Coord, Minefield};
 use rand::seq::SliceRandom;
 
-use crate::csp::ConstaintSatisficationState;
+use crate::csp::ConstraintSatisficationState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 /// Represents a single decision

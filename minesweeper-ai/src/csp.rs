@@ -96,22 +96,22 @@ pub enum CSPError {}
 
 /// General state used for solving Constraint Satisfication Problem
 #[derive(Debug, Clone)]
-pub struct ConstaintSatisficationState<const W: usize, const H: usize> {
+pub struct ConstraintSatisficationState<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
     pub constraint_sets: CoupledSets<W, H>,
     pub known_fields: KnownMinefield<W, H>,
 }
 
-impl<const W: usize, const H: usize> Default for ConstaintSatisficationState<W, H> {
+impl<const W: usize, const H: usize> Default for ConstraintSatisficationState<W, H> {
     fn default() -> Self {
-        ConstaintSatisficationState {
+        ConstraintSatisficationState {
             constraint_sets: CoupledSets::default(),
             known_fields: Matrix([[CellContent::default(); W]; H]),
         }
     }
 }
 
-impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
+impl<const W: usize, const H: usize> ConstraintSatisficationState<W, H> {
     /// TODO: Docs
     pub fn ponder(
         &mut self,

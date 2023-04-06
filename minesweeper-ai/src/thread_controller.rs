@@ -13,7 +13,7 @@ use std::{
 
 use miinaharava::minefield::{GameState, Minefield, Reveal};
 
-use crate::{ai::Decision, csp::ConstaintSatisficationState};
+use crate::{ai::Decision, csp::ConstraintSatisficationState};
 
 /// Macro that is useful for measuring how long a certain expression took.
 macro_rules! measure {
@@ -165,7 +165,6 @@ impl StateWrapper {
     /// having to match generics.
     #[cfg(debug_assertions)]
     pub fn print(&self) {
-        use crate::csp::ConstaintSatisficationState;
         match self {
             StateWrapper::Easy(s) => {
                 dbg!(&s.csp_state);
@@ -201,7 +200,7 @@ pub struct State<const W: usize, const H: usize> {
     /// The current stack of decisions from the last ponder.
     decisions: Vec<Decision<W, H>>,
     reveals: Vec<Reveal<W, H>>,
-    csp_state: ConstaintSatisficationState<W, H>,
+    csp_state: ConstraintSatisficationState<W, H>,
 }
 
 /// The common statistics from a State, that are not bound by generics.
@@ -231,7 +230,7 @@ impl<const W: usize, const H: usize> State<W, H> {
             },
             decisions: Vec::new(),
             reveals: Vec::new(),
-            csp_state: ConstaintSatisficationState::default(),
+            csp_state: ConstraintSatisficationState::default(),
         }
     }
 
@@ -250,7 +249,7 @@ impl<const W: usize, const H: usize> State<W, H> {
             self.stats.generation_time += time;
             self.decisions.clear();
             self.reveals.clear();
-            self.csp_state = ConstaintSatisficationState::default();
+            self.csp_state = ConstraintSatisficationState::default();
         } else if self.decisions.is_empty() {
             let (decisions, time) = measure!(self
                 .csp_state

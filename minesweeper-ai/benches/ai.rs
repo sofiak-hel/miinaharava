@@ -1,18 +1,21 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use miinaharava::minefield::{Coord, GameState, Minefield};
-use minesweeper_ai::ai::{ponder, Decision::*};
+use minesweeper_ai::{ai::Decision::*, csp::ConstraintSatisficationState};
 
 pub fn benchmark_specific_difficulty<const W: usize, const H: usize>(mines: u8) {
     let mut minefield = Minefield::<W, H>::generate(mines).unwrap();
+    let mut csp_state = ConstraintSatisficationState::default();
+    let mut reveals = Vec::new();
     while minefield.game_state() == GameState::Pending {
-        let decisions = ponder(&minefield);
+        let decisions = csp_state.ponder(reveals.drain(..).collect(), &minefield);
 
         for decision in decisions {
-            match decision {
-                Flag(c) => minefield.flag(c),
-                Reveal(c) => minefield.reveal(c),
+            if let Some(res) = match decision {
+                Flag(c) => minefield.flag(c).ok(),
+                Reveal(c) => minefield.reveal(c).ok(),
+            } {
+                reveals.extend(res);
             }
-            .ok();
         }
     }
 }

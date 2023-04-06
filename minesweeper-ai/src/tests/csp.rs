@@ -5,7 +5,7 @@ use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
 
 use crate::{
     ai::Decision,
-    csp::{CellContent, ConstaintSatisficationState, Constraint, ConstraintSet},
+    csp::{CellContent, Constraint, ConstraintSatisficationState, ConstraintSet},
 };
 
 const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
@@ -75,7 +75,7 @@ const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
 #[test]
 fn test_constraint_generation() {
     let mut minefield = Minefield::<7, 7>::with_mines(TRIVIAL_MINES);
-    let mut state = ConstaintSatisficationState::default();
+    let mut state = ConstraintSatisficationState::default();
     let reveals = minefield.reveal(Coord(0, 0)).unwrap();
     state.handle_reveals(reveals, &minefield);
 
