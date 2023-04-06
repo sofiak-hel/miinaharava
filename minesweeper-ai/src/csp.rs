@@ -176,9 +176,12 @@ impl<const W: usize, const H: usize> ConstraintSatisficationState<W, H> {
         let mut prev_decisions = decisions.len();
         while {
             for set in &mut self.constraint_sets.0 {
-                decisions.extend(set.solve_trivial_cases(&mut self.known_fields));
-                decisions.extend(set.clear_known_variables(&self.known_fields));
-                set.reduce();
+                let mut res = set.solve_trivial_cases(&mut self.known_fields);
+                res.extend(set.clear_known_variables(&self.known_fields));
+                if !res.is_empty() {
+                    set.reduce();
+                }
+                decisions.extend(res);
             }
             decisions.len() != prev_decisions
         } {
