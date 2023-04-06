@@ -51,7 +51,7 @@ fn test_trivial_constraints() {
             let mut variables = ArrayVec::try_from(&*vec).unwrap();
             variables.fill_with(Coord::random);
 
-            state.constraints.insert(Constraint {
+            state.constraint_sets.insert(Constraint {
                 label: black_box(amount * multiplier),
                 variables: variables.clone(),
             });
@@ -99,7 +99,7 @@ fn test_constraint_generation() {
     };
     expected_set.reduce();
 
-    assert_eq!(*state.constraints.0.get(0).unwrap(), expected_set);
+    assert_eq!(*state.constraint_sets.0.get(0).unwrap(), expected_set);
 }
 
 #[test]
@@ -241,7 +241,7 @@ fn test_trivial_cases_2() {
                 .collect::<Vec<_>>();
             expected.sort();
             expected.dedup();
-            let decisions = set.solve_trivial_cases_2_electric_boogaloo(&mut known);
+            let decisions = set.solve_trivial_cases_2(&mut known);
             assert_eq!(decisions, expected);
 
             // 4. Make sure the correct cells got marked as known, and no other
@@ -285,14 +285,14 @@ fn test_trivial_on_nontrivial() {
         // 3. Make sure trivial_solver does nothing with these constraints
         let old_length = set.constraints.len();
         dbg!(&set);
-        let decisions = set.solve_trivial_cases_2_electric_boogaloo(&mut known);
+        let decisions = set.solve_trivial_cases_2(&mut known);
 
         assert!(decisions.is_empty());
         assert_eq!(known, Matrix([[CellContent::Unknown; 10]; 10]));
         assert_eq!(set.constraints.len(), old_length);
 
         // 4. Make sure trivial solver is idempotent
-        let decisions = set.solve_trivial_cases_2_electric_boogaloo(&mut known);
+        let decisions = set.solve_trivial_cases_2(&mut known);
 
         assert!(decisions.is_empty());
         assert_eq!(known, Matrix([[CellContent::Unknown; 10]; 10]));

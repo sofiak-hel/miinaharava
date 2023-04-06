@@ -2,7 +2,7 @@
 //! Constraint Satisfaction Problem.
 
 use arrayvec::ArrayVec;
-use miinaharava::minefield::{Cell, Coord, Matrix, Minefield};
+use miinaharava::minefield::{Cell, Coord, Matrix, Minefield, Reveal};
 use std::{collections::HashSet, fmt::Debug};
 
 use crate::ai::Decision;
@@ -98,14 +98,14 @@ pub enum CSPError {}
 #[derive(Debug, Clone)]
 pub struct ConstaintSatisficationState<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
-    pub constraints: CoupledSets<W, H>,
+    pub constraint_sets: CoupledSets<W, H>,
     pub known_fields: KnownMinefield<W, H>,
 }
 
 impl<const W: usize, const H: usize> Default for ConstaintSatisficationState<W, H> {
     fn default() -> Self {
         ConstaintSatisficationState {
-            constraints: CoupledSets::default(),
+            constraint_sets: CoupledSets::default(),
             known_fields: Matrix([[CellContent::default(); W]; H]),
         }
     }
@@ -139,7 +139,7 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
             }
         }
         ConstaintSatisficationState {
-            constraints,
+            constraint_sets: constraints,
             ..Default::default()
         }
     }
@@ -148,7 +148,7 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
     /// have an obvious answer.
     pub fn solve_trivial_cases(&self) -> Result<Vec<Decision<W, H>>, CSPError> {
         let mut decisions = Vec::new();
-        for constraint_set in &self.constraints.0 {
+        for constraint_set in &self.constraint_sets.0 {
             for constraint in &constraint_set.constraints {
                 if constraint.label as usize == constraint.variables.len() {
                     for variable in &constraint.variables {
@@ -166,6 +166,59 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
         decisions.dedup();
 
         Ok(decisions)
+    }
+
+    /// TODO: Docs
+    pub fn handle_reveals(
+        &mut self,
+        reveals: Vec<Reveal<W, H>>,
+        minefield: &Minefield<W, H>,
+    ) -> Vec<Decision<W, H>> {
+        let mut decisions = Vec::new();
+        for (coord, cell) in &reveals {
+            self.known_fields
+                .set(*coord, CellContent::Known(*cell == Cell::Mine))
+        }
+        for (coord, cell) in &reveals {
+            if let Cell::Label(num) = cell {
+                let mut neighbors = ArrayVec::new();
+                for neighbor in coord.neighbours().iter() {
+                    // TODO: Possible optimization for later
+                    // match minefield.field.get(*neighbor) {
+                    //     Cell::Flag => num -= 1,
+                    //     Cell::Hidden => neighbors.push(*neighbor),
+                    //     _ => {}
+                    // };
+                    if matches!(minefield.field.get(*neighbor), Cell::Flag | Cell::Hidden) {
+                        neighbors.push(*neighbor);
+                    }
+                }
+                if !neighbors.is_empty() {
+                    let constraint = Constraint {
+                        label: *num,
+                        variables: neighbors,
+                    };
+                    self.constraint_sets.insert(constraint);
+                }
+            }
+        }
+        for set in &mut self.constraint_sets.0 {
+            set.reduce();
+        }
+
+        let mut prev_decisions = decisions.len();
+        while {
+            for set in &mut self.constraint_sets.0 {
+                decisions.extend(set.solve_trivial_cases_2(&mut self.known_fields));
+                decisions.extend(set.clear_known_variables(&self.known_fields));
+                set.reduce();
+            }
+            decisions.len() != prev_decisions
+        } {
+            prev_decisions = decisions.len()
+        }
+
+        decisions
     }
 }
 
@@ -302,7 +355,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
     /// Solves trivial cases, meaning that it will reveal all variables that
     /// have an obvious answer.
-    pub fn solve_trivial_cases_2_electric_boogaloo(
+    pub fn solve_trivial_cases_2(
         &mut self,
         known_field: &mut KnownMinefield<W, H>,
     ) -> Vec<Decision<W, H>> {
