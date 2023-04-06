@@ -2,7 +2,7 @@
 //! Constraint Satisfaction Problem.
 
 use arrayvec::ArrayVec;
-use miinaharava::minefield::{Cell, Coord, Minefield};
+use miinaharava::minefield::{Cell, Coord, Matrix, Minefield};
 use std::{collections::HashSet, fmt::Debug};
 
 use crate::ai::Decision;
@@ -156,6 +156,15 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
     }
 }
 
+type KnownMinefield<const W: usize, const H: usize> = Matrix<CellContent, W, H>;
+
+#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CellContent {
+    Known(bool),
+    #[default]
+    Unknown,
+}
+
 #[derive(Debug, Clone, Default)]
 /// TODO: Docs
 pub struct CoupledSets<const W: usize, const H: usize>(pub Vec<ConstraintSet<W, H>>);
@@ -243,6 +252,40 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             self.constraints.push(constraint);
             self.reduce();
         }
+    }
+
+    /// Solves trivial cases, meaning that it will reveal all variables that
+    /// have an obvious answer.
+    pub fn solve_trivial_cases_2_electric_boogaloo(
+        &mut self,
+        known_field: &mut KnownMinefield<W, H>,
+    ) -> Result<Vec<Decision<W, H>>, CSPError> {
+        let mut decisions = Vec::new();
+        let mut idx = 0;
+        while idx < self.constraints.len() {
+            // Looks spooky, but as long as constraints is not modified
+            // elsewhere while this is running, it's fine.
+            let constraint = unsafe { self.constraints.get_unchecked(idx) };
+            if constraint.label == 0 {
+                for variable in &constraint.variables {
+                    known_field.set(*variable, CellContent::Known(false));
+                    decisions.push(Decision::Reveal(*variable));
+                }
+                self.constraints.remove(idx);
+            } else if constraint.label as usize == constraint.variables.len() {
+                for variable in &constraint.variables {
+                    known_field.set(*variable, CellContent::Known(true));
+                    decisions.push(Decision::Flag(*variable));
+                }
+                self.constraints.remove(idx);
+            } else {
+                idx += 1;
+            }
+        }
+        decisions.sort();
+        decisions.dedup();
+
+        Ok(decisions)
     }
 
     /// TODO: Docs

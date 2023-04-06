@@ -5,7 +5,7 @@ use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
 
 use crate::{
     ai::{ponder, Decision},
-    csp::{ConstaintSatisficationState, Constraint, ConstraintSet},
+    csp::{CellContent, ConstaintSatisficationState, Constraint, ConstraintSet},
 };
 
 const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
@@ -219,7 +219,7 @@ fn test_random_reduces() {
                 }
             }
 
-            // Also make sure c1 is still a valid constraint
+            // 4. Also make sure c1 is still a valid constraint
             let true_value = c1
                 .variables
                 .iter()
@@ -227,6 +227,96 @@ fn test_random_reduces() {
                 .count();
             assert_eq!(true_value as u8, c1.label);
         }
+
+        // 5. Make sure reduce is idempotent.
+        let clone = constraint_set.clone();
+        constraint_set.reduce();
+        assert_eq!(clone, constraint_set);
+    }
+}
+
+#[test]
+fn test_trivial_cases_2() {
+    for _ in 0..50 {
+        // multiplier is 0 = should reveal all constraints
+        // 1 = should flag all constraints
+        for multiplier in 0..=1 {
+            let mut known = Matrix([[CellContent::Unknown; 10]; 10]);
+            let mut set = ConstraintSet::default();
+            // Generate some random variables
+            let amount = black_box(rand::random::<u8>() % 9);
+            let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
+            let mut variables = ArrayVec::try_from(&*vec).unwrap();
+            variables.fill_with(Coord::random);
+
+            // Insert variables into the constrait
+            // multiplier = 0 = all of them are empty
+            // multiplier = 1 = all of them are mines
+            set.insert(Constraint {
+                label: black_box(amount * multiplier),
+                variables: variables.clone(),
+            });
+            dbg!(&set);
+            let mut decisions = set
+                .solve_trivial_cases_2_electric_boogaloo(&mut known)
+                .unwrap();
+            decisions.sort();
+
+            let mut expected = variables
+                .iter()
+                .map(|v| match multiplier {
+                    1 => Decision::Flag(*v),
+                    _ => Decision::Reveal(*v),
+                })
+                .collect::<Vec<_>>();
+            expected.sort();
+            expected.dedup();
+            assert_eq!(decisions, expected);
+
+            for (y, row) in known.iter().enumerate() {
+                for (x, cell) in row.iter().enumerate() {
+                    if variables.contains(&Coord(x as u8, y as u8)) {
+                        assert_eq!(*cell, CellContent::Known(multiplier == 1));
+                    } else {
+                        assert_eq!(*cell, CellContent::Unknown)
+                    }
+                }
+            }
+
+            assert_eq!(set.constraints.len(), 0);
+        }
+    }
+}
+
+#[test]
+fn test_trivial_on_nontrivial() {
+    for _ in 0..100 {
+        let mut known = Matrix([[CellContent::Unknown; 10]; 10]);
+        let mut set = ConstraintSet::default();
+        // Generate some random variables
+        let amount = black_box(rand::random::<u8>() % 9);
+        let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
+        let mut variables = ArrayVec::try_from(&*vec).unwrap();
+        variables.fill_with(Coord::random);
+
+        // Generate constraints that always have a different label than the
+        // number of variables thus making them nontrivial
+        set.insert(Constraint {
+            label: black_box((rand::random::<u8>() % 100 + 9) ^ amount),
+            variables: variables.clone(),
+        });
+
+        // Make sure trivial_solver does nothing with these constraints
+        let old_length = set.constraints.len();
+        dbg!(&set);
+        let decisions = set
+            .solve_trivial_cases_2_electric_boogaloo(&mut known)
+            .unwrap();
+        assert!(decisions.is_empty());
+
+        assert_eq!(known, Matrix([[CellContent::Unknown; 10]; 10]));
+
+        assert_eq!(set.constraints.len(), old_length);
     }
 }
 
