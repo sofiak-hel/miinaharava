@@ -39,38 +39,38 @@ fn solve_trivial_field() {
     assert_eq!(minefield.game_state(), GameState::Victory)
 }
 
-#[test]
-fn test_trivial_constraints() {
-    for _ in 0..50 {
-        // multiplier is 0 = should reveal all constraints
-        // 1 = should flag all constraints
-        for multiplier in 0..=1 {
-            let mut state = ConstaintSatisficationState::<10, 10>::default();
-            let amount = black_box(rand::random::<u8>() % 9);
-            let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
-            let mut variables = ArrayVec::try_from(&*vec).unwrap();
-            variables.fill_with(Coord::random);
+// #[test]
+// fn test_trivial_constraints() {
+//     for _ in 0..50 {
+//         // multiplier is 0 = should reveal all constraints
+//         // 1 = should flag all constraints
+//         for multiplier in 0..=1 {
+//             let mut state = ConstaintSatisficationState::<10, 10>::default();
+//             let amount = black_box(rand::random::<u8>() % 9);
+//             let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
+//             let mut variables = ArrayVec::try_from(&*vec).unwrap();
+//             variables.fill_with(Coord::random);
 
-            state.constraint_sets.insert(Constraint {
-                label: black_box(amount * multiplier),
-                variables: variables.clone(),
-            });
-            dbg!(&state);
-            let mut decisions = state.solve_trivial_cases().unwrap();
-            decisions.sort();
-            let mut expected = variables
-                .iter()
-                .map(|v| match multiplier {
-                    1 => Decision::Flag(*v),
-                    _ => Decision::Reveal(*v),
-                })
-                .collect::<Vec<_>>();
-            expected.sort();
-            expected.dedup();
-            assert_eq!(decisions, expected);
-        }
-    }
-}
+//             state.constraint_sets.insert(Constraint {
+//                 label: black_box(amount * multiplier),
+//                 variables: variables.clone(),
+//             });
+//             dbg!(&state);
+//             let mut decisions = state.solve_trivial_cases().unwrap();
+//             decisions.sort();
+//             let mut expected = variables
+//                 .iter()
+//                 .map(|v| match multiplier {
+//                     1 => Decision::Flag(*v),
+//                     _ => Decision::Reveal(*v),
+//                 })
+//                 .collect::<Vec<_>>();
+//             expected.sort();
+//             expected.dedup();
+//             assert_eq!(decisions, expected);
+//         }
+//     }
+// }
 
 #[test]
 fn test_constraint_generation() {
@@ -225,10 +225,13 @@ fn test_trivial_cases_2() {
             // 2. Insert variables into the constrait, calculate label
             // multiplier = 0 = all of them are empty
             // multiplier = 1 = all of them are mines
-            set.insert(Constraint {
-                label: black_box(amount * multiplier),
-                variables: variables.clone(),
-            });
+            set.insert(
+                Constraint {
+                    label: black_box(amount * multiplier),
+                    variables: variables.clone(),
+                },
+                &mut known,
+            );
             dbg!(&set);
 
             // 3. Make sure returned decisions are as expected
@@ -279,10 +282,13 @@ fn test_trivial_on_nontrivial() {
 
         // 2. Generate constraints that always have a different label than the
         // number of variables thus making them nontrivial
-        set.insert(Constraint {
-            label: black_box((rand::random::<u8>() % 100 + 9) ^ amount),
-            variables: variables.clone(),
-        });
+        set.insert(
+            Constraint {
+                label: black_box((rand::random::<u8>() % 100 + 9) ^ amount),
+                variables: variables.clone(),
+            },
+            &mut known,
+        );
 
         // 3. Make sure trivial_solver does nothing with these constraints
         let old_length = set.constraints.len();

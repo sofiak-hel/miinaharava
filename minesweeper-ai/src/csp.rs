@@ -133,7 +133,8 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
                             label: num,
                             variables: neighbors,
                         };
-                        constraints.insert(constraint);
+                        constraints
+                            .insert(constraint, &mut Matrix([[CellContent::default(); W]; H]));
                     }
                 }
             }
@@ -212,11 +213,20 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
                         label: *num,
                         variables: neighbors,
                     };
-                    self.constraint_sets.insert(constraint);
+                    if let Some(res) = self
+                        .constraint_sets
+                        .insert(constraint, &mut self.known_fields)
+                    {
+                        decisions.extend(res);
+                    }
                 }
             }
         }
+
         for set in &mut self.constraint_sets.0 {
+            if !decisions.is_empty() {
+                decisions.extend(set.clear_known_variables(&self.known_fields));
+            }
             set.reduce();
         }
 
@@ -262,7 +272,12 @@ pub struct CoupledSets<const W: usize, const H: usize>(pub Vec<ConstraintSet<W, 
 
 impl<const W: usize, const H: usize> CoupledSets<W, H> {
     /// TODO: Docs
-    pub fn insert(&mut self, constraint: Constraint<W, H>) {
+    #[must_use]
+    pub fn insert(
+        &mut self,
+        constraint: Constraint<W, H>,
+        known_minefield: &mut KnownMinefield<W, H>,
+    ) -> Option<Vec<Decision<W, H>>> {
         // Returns mutably all the constraint sets that contain any of the
         // variables in the new constraints, and their indexes
         let (mut indexes, sets): (Vec<usize>, Vec<&mut ConstraintSet<W, H>>) = self
@@ -282,11 +297,12 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
 
         // If a constraint set was found, insert the constraint set in it,
         // otherwise create a new set.
-        if let Some(constraints) = constraints {
-            constraints.insert(constraint);
+        let decisions = if let Some(constraints) = constraints {
+            constraints.insert(constraint, known_minefield)
         } else {
-            self.0.push(ConstraintSet::from(constraint))
-        }
+            self.0.push(ConstraintSet::from(constraint));
+            None
+        };
 
         // Remove all other constraint sets
         if !indexes.is_empty() {
@@ -295,6 +311,8 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
                 self.0.remove(*index);
             }
         }
+
+        decisions
     }
 }
 
@@ -335,15 +353,27 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     }
 
     /// TODO: Docs
-    pub fn insert(&mut self, constraint: Constraint<W, H>) {
+    #[must_use]
+    pub fn insert(
+        &mut self,
+        constraint: Constraint<W, H>,
+        known_field: &mut KnownMinefield<W, H>,
+    ) -> Option<Vec<Decision<W, H>>> {
         self.variables.extend(constraint.variables.iter());
         if !constraint.is_empty() && !self.constraints.contains(&constraint) {
-            self.constraints.push(constraint);
-            self.reduce();
+            if let Some(decisions) = self.solve_trivial_constraint(&constraint, known_field) {
+                Some(decisions)
+            } else {
+                self.constraints.push(constraint);
+                None
+            }
+        } else {
+            None
         }
     }
 
     /// TODO: Docs
+    #[must_use]
     pub fn clear_known_variables(
         &mut self,
         known_field: &KnownMinefield<W, H>,
@@ -380,6 +410,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
     /// Solves trivial cases, meaning that it will reveal all variables that
     /// have an obvious answer.
+    #[must_use]
     pub fn solve_trivial_cases_2(
         &mut self,
         known_field: &mut KnownMinefield<W, H>,
@@ -398,6 +429,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     }
 
     /// TODO: Docs
+    #[must_use]
     pub fn solve_trivial_constraint(
         &self,
         constraint: &Constraint<W, H>,
