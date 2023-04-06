@@ -95,14 +95,14 @@ pub enum CSPError {}
 #[derive(Debug, Clone, Default)]
 pub struct ConstaintSatisficationState<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
-    pub constraints: ConstraintSets<W, H>,
+    pub constraints: CoupledSets<W, H>,
 }
 
 impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
     /// Constructs a CPS-state from a given minefield. Goes through all labels
     /// in the visual field and creates a constraint from them.
     pub fn from(minefield: &Minefield<W, H>) -> Self {
-        let mut constraints = ConstraintSets(Vec::with_capacity(W * H));
+        let mut constraints = CoupledSets(Vec::with_capacity(W * H));
 
         for (y, row) in minefield.field.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
@@ -155,14 +155,14 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
 
 #[derive(Debug, Clone, Default)]
 /// TODO: Docs
-pub struct ConstraintSets<const W: usize, const H: usize>(Vec<CoupledConstraints<W, H>>);
+pub struct CoupledSets<const W: usize, const H: usize>(Vec<ConstraintSet<W, H>>);
 
-impl<const W: usize, const H: usize> ConstraintSets<W, H> {
+impl<const W: usize, const H: usize> CoupledSets<W, H> {
     /// TODO: Docs
     pub fn insert(&mut self, constraint: Constraint<W, H>) {
         // Returns mutably all the constraint sets that contain any of the
         // variables in the new constraints, and their indexes
-        let (mut indexes, sets): (Vec<usize>, Vec<&mut CoupledConstraints<W, H>>) = self
+        let (mut indexes, sets): (Vec<usize>, Vec<&mut ConstraintSet<W, H>>) = self
             .0
             .iter_mut()
             .enumerate()
@@ -182,7 +182,7 @@ impl<const W: usize, const H: usize> ConstraintSets<W, H> {
         if let Some(constraints) = constraints {
             constraints.insert(constraint);
         } else {
-            self.0.push(CoupledConstraints::from(constraint))
+            self.0.push(ConstraintSet::from(constraint))
         }
 
         // Remove all other constraint sets
@@ -197,27 +197,24 @@ impl<const W: usize, const H: usize> ConstraintSets<W, H> {
 
 /// Coupled Constraints
 #[derive(Debug, Clone, Default)]
-pub struct CoupledConstraints<const W: usize, const H: usize> {
+pub struct ConstraintSet<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
     pub constraints: Vec<Constraint<W, H>>,
     /// List of all the variables that are in this set of coupled constraints
     pub variables: HashSet<Coord<W, H>>,
 }
 
-impl<const W: usize, const H: usize> CoupledConstraints<W, H> {
+impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     /// TODO: Docs
-    pub fn from(constraint: Constraint<W, H>) -> CoupledConstraints<W, H> {
-        CoupledConstraints {
+    pub fn from(constraint: Constraint<W, H>) -> ConstraintSet<W, H> {
+        ConstraintSet {
             variables: HashSet::from_iter(constraint.variables.clone().into_iter()),
             constraints: vec![constraint],
         }
     }
 
     /// TODO: Docs
-    pub fn combine(
-        &mut self,
-        other: &mut CoupledConstraints<W, H>,
-    ) -> &mut CoupledConstraints<W, H> {
+    pub fn combine(&mut self, other: &mut ConstraintSet<W, H>) -> &mut ConstraintSet<W, H> {
         self.constraints.extend(other.constraints.iter().cloned());
         self.variables.extend(other.variables.iter().cloned());
         self.constraints.sort();
@@ -249,14 +246,16 @@ impl<const W: usize, const H: usize> CoupledConstraints<W, H> {
                 let (smaller, others) = self.constraints.split_at_mut(smallest_idx + 1);
                 let smallest = &mut smaller[smaller.len() - 1];
 
-                for other in &mut *others {
-                    if other.len() > smallest.len() && other.is_superset_of(smallest) {
-                        other.subtract(smallest);
-                        edited = true;
+                if !smallest.is_empty() {
+                    for other in &mut *others {
+                        if other.len() > smallest.len() && other.is_superset_of(smallest) {
+                            other.subtract(smallest);
+                            edited = true;
+                        }
                     }
-                }
-                if edited {
-                    break;
+                    if edited {
+                        break;
+                    }
                 }
             }
         }
