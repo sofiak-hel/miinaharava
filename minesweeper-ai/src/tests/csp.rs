@@ -1,11 +1,11 @@
-use std::hint::black_box;
+use std::{collections::HashSet, hint::black_box};
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
 
 use crate::{
     ai::{ponder, Decision},
-    csp::{ConstaintSatisficationState, Constraint},
+    csp::{ConstaintSatisficationState, Constraint, ConstraintSet},
 };
 
 const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
@@ -78,7 +78,7 @@ fn test_constraint_generation() {
     minefield.reveal(Coord(0, 0)).unwrap();
 
     let state = ConstaintSatisficationState::from(&minefield);
-    let mut expected: Vec<Constraint<7, 7>> = vec![
+    let expected: Vec<Constraint<7, 7>> = vec![
         Constraint {
             label: 1,
             variables: ArrayVec::try_from(&[Coord(0, 3), Coord(1, 3)][..]).unwrap(),
@@ -115,9 +115,13 @@ fn test_constraint_generation() {
             variables: ArrayVec::try_from(&[Coord(5, 2), Coord(6, 2)][..]).unwrap(),
         },
     ];
-    let mut constraints = state.constraints;
-    expected.sort();
-    // constraints.sort();
+    let mut set = HashSet::new();
+    set.extend(expected.iter().flat_map(|c| c.variables.clone()));
+    let mut expected_set = ConstraintSet {
+        constraints: expected,
+        variables: set,
+    };
+    expected_set.reduce();
 
-    // assert_eq!(constraints, expected);
+    assert_eq!(*state.constraints.0.get(0).unwrap(), expected_set);
 }

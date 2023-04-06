@@ -155,7 +155,7 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
 
 #[derive(Debug, Clone, Default)]
 /// TODO: Docs
-pub struct CoupledSets<const W: usize, const H: usize>(Vec<ConstraintSet<W, H>>);
+pub struct CoupledSets<const W: usize, const H: usize>(pub Vec<ConstraintSet<W, H>>);
 
 impl<const W: usize, const H: usize> CoupledSets<W, H> {
     /// TODO: Docs
@@ -202,6 +202,15 @@ pub struct ConstraintSet<const W: usize, const H: usize> {
     pub constraints: Vec<Constraint<W, H>>,
     /// List of all the variables that are in this set of coupled constraints
     pub variables: HashSet<Coord<W, H>>,
+}
+impl<const W: usize, const H: usize> PartialEq for ConstraintSet<W, H> {
+    fn eq(&self, other: &Self) -> bool {
+        let mut a = self.constraints.clone();
+        let mut b = other.constraints.clone();
+        a.sort();
+        b.sort();
+        a == b && self.variables == other.variables
+    }
 }
 
 impl<const W: usize, const H: usize> ConstraintSet<W, H> {
