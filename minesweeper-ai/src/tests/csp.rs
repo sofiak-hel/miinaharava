@@ -241,7 +241,9 @@ fn test_trivial_cases_2() {
                 .collect::<Vec<_>>();
             expected.sort();
             expected.dedup();
-            let decisions = set.solve_trivial_cases_2(&mut known);
+            let mut decisions = set.solve_trivial_cases_2(&mut known);
+            decisions.sort();
+            decisions.dedup();
             assert_eq!(decisions, expected);
 
             // 4. Make sure the correct cells got marked as known, and no other

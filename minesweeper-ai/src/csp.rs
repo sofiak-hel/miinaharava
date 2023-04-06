@@ -387,26 +387,38 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         let mut decisions = Vec::new();
         let mut idx = 0;
         while let Some(constraint) = self.constraints.get(idx) {
-            if constraint.label == 0 {
-                for variable in &constraint.variables {
-                    known_field.set(*variable, CellContent::Known(false));
-                    decisions.push(Decision::Reveal(*variable));
-                }
-                self.constraints.remove(idx);
-            } else if constraint.label as usize == constraint.variables.len() {
-                for variable in &constraint.variables {
-                    known_field.set(*variable, CellContent::Known(true));
-                    decisions.push(Decision::Flag(*variable));
-                }
+            if let Some(d) = self.solve_trivial_constraint(constraint, known_field) {
+                decisions.extend(d);
                 self.constraints.remove(idx);
             } else {
                 idx += 1;
             }
         }
-        decisions.sort();
-        decisions.dedup();
-
         decisions
+    }
+
+    /// TODO: Docs
+    pub fn solve_trivial_constraint(
+        &self,
+        constraint: &Constraint<W, H>,
+        known_field: &mut KnownMinefield<W, H>,
+    ) -> Option<Vec<Decision<W, H>>> {
+        let mut decisions = Vec::new();
+        if constraint.label == 0 {
+            for variable in &constraint.variables {
+                known_field.set(*variable, CellContent::Known(false));
+                decisions.push(Decision::Reveal(*variable));
+            }
+            Some(decisions)
+        } else if constraint.label as usize == constraint.variables.len() {
+            for variable in &constraint.variables {
+                known_field.set(*variable, CellContent::Known(true));
+                decisions.push(Decision::Flag(*variable));
+            }
+            Some(decisions)
+        } else {
+            None
+        }
     }
 
     /// TODO: Docs
