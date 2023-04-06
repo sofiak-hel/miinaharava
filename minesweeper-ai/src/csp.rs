@@ -236,15 +236,16 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
             .unzip();
 
         // Combine all retrieved constraints into the first constraint
-        let constraints = sets.into_iter().reduce(|a, b| a.combine(b));
+        let constraint_set = sets.into_iter().reduce(|a, b| a.combine(b));
 
         // If a constraint set was found, insert the constraint set in it,
         // otherwise create a new set.
-        let decisions = if let Some(constraints) = constraints {
-            constraints.insert(constraint, known_minefield)
+        let decisions = if let Some(set) = constraint_set {
+            set.insert(constraint, known_minefield)
         } else {
-            self.0.push(ConstraintSet::from(constraint));
-            None
+            self.0.push(ConstraintSet::default());
+            let set = self.0.get_mut(0).unwrap();
+            set.insert(constraint, known_minefield)
         };
 
         // Remove all other constraint sets
@@ -279,14 +280,6 @@ impl<const W: usize, const H: usize> PartialEq for ConstraintSet<W, H> {
 
 impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     /// TODO: Docs
-    pub fn from(constraint: Constraint<W, H>) -> ConstraintSet<W, H> {
-        ConstraintSet {
-            variables: HashSet::from_iter(constraint.variables.clone().into_iter()),
-            constraints: vec![constraint],
-        }
-    }
-
-    /// TODO: Docs
     pub fn combine(&mut self, other: &mut ConstraintSet<W, H>) -> &mut ConstraintSet<W, H> {
         self.constraints.extend(other.constraints.iter().cloned());
         self.variables.extend(other.variables.iter().cloned());
@@ -302,11 +295,11 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         constraint: Constraint<W, H>,
         known_field: &mut KnownMinefield<W, H>,
     ) -> Option<Vec<Decision<W, H>>> {
-        self.variables.extend(constraint.variables.iter());
         if !constraint.is_empty() && !self.constraints.contains(&constraint) {
             if let Some(decisions) = self.solve_trivial_constraint(&constraint, known_field) {
                 Some(decisions)
             } else {
+                self.variables.extend(constraint.variables.iter());
                 self.constraints.push(constraint);
                 None
             }
