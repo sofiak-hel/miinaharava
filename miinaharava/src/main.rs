@@ -50,9 +50,9 @@ fn game_main<const W: usize, const H: usize>(game: &mut Game, mines: u8) -> Opti
                 } if minefield.game_state() == GameState::Pending => {
                     mouse_pressed = false;
                     match (mouse_btn, game.get_coord((x, y))) {
-                        (MouseButton::Left, Some(coord)) => minefield.reveal(coord).unwrap(),
-                        (MouseButton::Right, Some(coord)) => minefield.flag(coord).unwrap(),
-                        _ => {}
+                        (MouseButton::Left, Some(coord)) => minefield.reveal(coord).ok(),
+                        (MouseButton::Right, Some(coord)) => minefield.flag(coord).ok(),
+                        _ => None,
                     };
                     None
                 }

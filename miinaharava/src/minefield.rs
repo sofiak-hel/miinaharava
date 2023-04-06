@@ -134,6 +134,8 @@ pub struct Minefield<const W: usize, const H: usize> {
     game_state: GameState,
 }
 
+pub type Reveal<const W: usize, const H: usize> = (Coord<W, H>, Cell);
+
 impl<const W: usize, const H: usize> Minefield<W, H> {
     /// Generate a new minefield with the provided amount of mines.
     ///
@@ -205,14 +207,21 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
     /// # Errors
     /// - [MinefieldError::GameHasEnded] if the game is already over
     /// - [MinefieldError::InvalidCoordinate] if the attempted coordinate was not valid.
-    pub fn reveal(&mut self, coord: Coord<W, H>) -> Result<(), MinefieldError> {
-        self._reveal(coord, true)
+    pub fn reveal(&mut self, coord: Coord<W, H>) -> Result<Vec<Reveal<W, H>>, MinefieldError> {
+        let mut reveals = Vec::new();
+        self._reveal(coord, true, &mut reveals)?;
+        Ok(reveals)
     }
 
     /// Private reveal function that contains `update_state`-parameter simply to
     /// help with recursion, literally halving the amount of time that reveal
     /// would otherwise take.
-    fn _reveal(&mut self, coord: Coord<W, H>, update_state: bool) -> Result<(), MinefieldError> {
+    fn _reveal(
+        &mut self,
+        coord: Coord<W, H>,
+        update_state: bool,
+        reveals: &mut Vec<Reveal<W, H>>,
+    ) -> Result<(), MinefieldError> {
         if self.game_state() != GameState::Pending {
             Err(MinefieldError::GameHasEnded)
         } else if coord.0 >= (W as u8) || coord.1 >= (H as u8) {
@@ -222,9 +231,10 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
             if field_cell == Cell::Flag || field_cell == Cell::Hidden {
                 let cell = self.cell_contents(coord);
                 self.field.set(coord, cell);
+                reveals.push((coord, cell));
                 if cell == Cell::Empty {
                     for neighbor in coord.neighbours() {
-                        match self._reveal(neighbor, false) {
+                        match self._reveal(neighbor, false, reveals) {
                             Err(MinefieldError::GameHasEnded) => break,
                             e => e?,
                         };
@@ -243,7 +253,7 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
     /// # Errors
     /// - [MinefieldError::GameHasEnded] if the game is already over
     /// - [MinefieldError::InvalidCoordinate] if the attempted coordinate was not valid.
-    pub fn flag(&mut self, coord: Coord<W, H>) -> Result<(), MinefieldError> {
+    pub fn flag(&mut self, coord: Coord<W, H>) -> Result<Vec<Reveal<W, H>>, MinefieldError> {
         if self.game_state() != GameState::Pending {
             Err(MinefieldError::GameHasEnded)
         } else if coord.0 >= (W as u8) || coord.1 >= (H as u8) {
@@ -257,7 +267,7 @@ impl<const W: usize, const H: usize> Minefield<W, H> {
                     c => c,
                 },
             );
-            Ok(())
+            Ok(Vec::new())
         }
     }
 

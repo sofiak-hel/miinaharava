@@ -95,10 +95,20 @@ impl<const W: usize, const H: usize> PartialEq for Constraint<W, H> {
 pub enum CSPError {}
 
 /// General state used for solving Constraint Satisfication Problem
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ConstaintSatisficationState<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
     pub constraints: CoupledSets<W, H>,
+    pub known_fields: KnownMinefield<W, H>,
+}
+
+impl<const W: usize, const H: usize> Default for ConstaintSatisficationState<W, H> {
+    fn default() -> Self {
+        ConstaintSatisficationState {
+            constraints: CoupledSets::default(),
+            known_fields: Matrix([[CellContent::default(); W]; H]),
+        }
+    }
 }
 
 impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
@@ -128,7 +138,10 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
                 }
             }
         }
-        ConstaintSatisficationState { constraints }
+        ConstaintSatisficationState {
+            constraints,
+            ..Default::default()
+        }
     }
 
     /// Solves trivial cases, meaning that it will reveal all variables that
@@ -335,9 +348,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                     for other in &mut *others {
                         if other.len() > smallest.len() && other.is_superset_of(smallest) {
                             #[cfg(test)]
-                            {
-                                dbg!(&other, &smallest);
-                            }
+                            dbg!(&other, &smallest);
                             other.subtract(smallest);
                             edited = true;
                         }
