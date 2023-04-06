@@ -11,9 +11,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-use miinaharava::minefield::{GameState, Minefield};
+use miinaharava::minefield::{GameState, Minefield, Reveal};
 
-use crate::ai::{ponder, Decision};
+use crate::{
+    ai::{ponder, Decision},
+    csp::ConstaintSatisficationState,
+};
 
 /// Macro that is useful for measuring how long a certain expression took.
 macro_rules! measure {
@@ -200,6 +203,8 @@ pub struct State<const W: usize, const H: usize> {
     pub stats: StateStats,
     /// The current stack of decisions from the last ponder.
     decisions: Vec<Decision<W, H>>,
+    reveals: Vec<Reveal<W, H>>,
+    csp_state: ConstaintSatisficationState<W, H>,
 }
 
 /// The common statistics from a State, that are not bound by generics.
@@ -228,6 +233,8 @@ impl<const W: usize, const H: usize> State<W, H> {
                 ..Default::default()
             },
             decisions: Vec::new(),
+            reveals: Vec::new(),
+            csp_state: ConstaintSatisficationState::default(),
         }
     }
 
@@ -244,19 +251,24 @@ impl<const W: usize, const H: usize> State<W, H> {
             let (minefield, time) = measure!(Minefield::generate(self.stats.mines).unwrap());
             self.minefield = minefield;
             self.stats.generation_time += time;
-            self.decisions = Vec::new();
+            self.decisions.clear();
+            self.reveals.clear();
+            self.csp_state = ConstaintSatisficationState::default();
         } else if self.decisions.is_empty() {
-            let (decisions, time) = measure!(ponder(&self.minefield));
+            let (decisions, time) = measure!(self
+                .csp_state
+                .ponder(self.reveals.drain(..).collect(), &self.minefield));
             self.stats.ai_time += time;
             self.decisions = decisions;
         }
         while let Some(decision) = self.decisions.pop() {
             let (_, time) = measure!({
-                match decision {
-                    Decision::Reveal(coord) => self.minefield.reveal(coord),
-                    Decision::Flag(coord) => self.minefield.flag(coord),
+                if let Some(reveals) = match decision {
+                    Decision::Reveal(coord) => self.minefield.reveal(coord).ok(),
+                    Decision::Flag(coord) => self.minefield.flag(coord).ok(),
+                } {
+                    self.reveals.extend(reveals);
                 }
-                .ok();
             });
             self.stats.decision_time += time;
             if !super_speed {

@@ -5,7 +5,7 @@ use arrayvec::ArrayVec;
 use miinaharava::minefield::{Cell, Coord, Matrix, Minefield, Reveal};
 use std::{collections::HashSet, fmt::Debug};
 
-use crate::ai::Decision;
+use crate::ai::{guess, Decision};
 
 /// Represents a single constraint where the variables represent tiles that are
 /// still unknown to some degree, and the label represents the value that the
@@ -169,6 +169,20 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
     }
 
     /// TODO: Docs
+    pub fn ponder(
+        &mut self,
+        reveals: Vec<Reveal<W, H>>,
+        minefield: &Minefield<W, H>,
+    ) -> Vec<Decision<W, H>> {
+        if reveals.is_empty() {
+            // Guess here maybe someday
+            vec![guess(minefield)]
+        } else {
+            self.handle_reveals(reveals, minefield)
+        }
+    }
+
+    /// TODO: Docs
     pub fn handle_reveals(
         &mut self,
         reveals: Vec<Reveal<W, H>>,
@@ -218,7 +232,18 @@ impl<const W: usize, const H: usize> ConstaintSatisficationState<W, H> {
             prev_decisions = decisions.len()
         }
 
+        decisions.sort();
+        decisions.dedup();
+
         decisions
+            .into_iter()
+            .filter(|decision| match decision {
+                Decision::Flag(c) => minefield.field.get(*c) == Cell::Hidden,
+                Decision::Reveal(c) => {
+                    !matches!(minefield.field.get(*c), Cell::Empty | Cell::Label(_))
+                }
+            })
+            .collect()
     }
 }
 
