@@ -262,10 +262,16 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         let mut decisions = Vec::new();
         for var in self.variables.clone() {
             if let CellContent::Known(val) = known_field.get(var) {
-                for constraint in self.constraints.iter_mut() {
+                let mut idx = 0;
+                while let Some(constraint) = self.constraints.get_mut(idx) {
                     while let Some(idx) = constraint.variables.iter().position(|v| *v == var) {
                         constraint.variables.remove(idx);
                         constraint.label -= val as u8;
+                    }
+                    if constraint.is_empty() {
+                        self.constraints.remove(idx);
+                    } else {
+                        idx += 1;
                     }
                 }
 
@@ -291,10 +297,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     ) -> Result<Vec<Decision<W, H>>, CSPError> {
         let mut decisions = Vec::new();
         let mut idx = 0;
-        while idx < self.constraints.len() {
-            // Looks spooky, but as long as constraints is not modified
-            // elsewhere while this is running, it's fine.
-            let constraint = unsafe { self.constraints.get_unchecked(idx) };
+        while let Some(constraint) = self.constraints.get(idx) {
             if constraint.label == 0 {
                 for variable in &constraint.variables {
                     known_field.set(*variable, CellContent::Known(false));
