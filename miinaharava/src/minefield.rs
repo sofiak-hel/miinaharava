@@ -2,12 +2,12 @@
 //! drawing and is entirely sufficient in of itself if a simple abstract
 //! representation is only needed.
 
-use std::fmt::Debug;
+use std::{fmt::Debug, hash::Hasher};
 
 use arrayvec::ArrayVec;
 
 /// Represents a tile coordinate on the minefield.
-#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub struct Coord<const W: usize, const H: usize>(pub u8, pub u8);
 
 impl<const W: usize, const H: usize> Coord<W, H> {
@@ -40,6 +40,12 @@ impl<const W: usize, const H: usize> Coord<W, H> {
 impl<const W: usize, const H: usize> Debug for Coord<W, H> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.0, self.1)
+    }
+}
+
+impl<const W: usize, const H: usize> std::hash::Hash for Coord<W, H> {
+    fn hash<Hash: Hasher>(&self, state: &mut Hash) {
+        state.write_u8(self.1 * W as u8 + self.0);
     }
 }
 
@@ -84,6 +90,12 @@ pub enum GameState {
 /// Generic struct for a 2D matrix of type T
 #[derive(Debug, PartialEq, Clone, Eq, Copy)]
 pub struct Matrix<T: Copy, const W: usize, const H: usize>(pub [[T; W]; H]);
+
+impl<T: Copy + Default, const W: usize, const H: usize> Default for Matrix<T, W, H> {
+    fn default() -> Self {
+        Matrix([[T::default(); W]; H])
+    }
+}
 
 impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
     /// Get element in position of Coord from the matrix

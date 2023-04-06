@@ -3,7 +3,7 @@
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Cell, Coord, Matrix, Minefield, Reveal};
-use std::{collections::HashSet, fmt::Debug};
+use std::{collections::HashSet, fmt::Debug, ops::Deref};
 
 use crate::ai::{guess, Decision};
 
@@ -81,20 +81,11 @@ impl<const W: usize, const H: usize> PartialEq for Constraint<W, H> {
 pub enum CSPError {}
 
 /// General state used for solving Constraint Satisfication Problem
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ConstraintSatisficationState<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
     pub constraint_sets: CoupledSets<W, H>,
     pub known_fields: KnownMinefield<W, H>,
-}
-
-impl<const W: usize, const H: usize> Default for ConstraintSatisficationState<W, H> {
-    fn default() -> Self {
-        ConstraintSatisficationState {
-            constraint_sets: CoupledSets::default(),
-            known_fields: Matrix([[CellContent::default(); W]; H]),
-        }
-    }
 }
 
 impl<const W: usize, const H: usize> ConstraintSatisficationState<W, H> {
@@ -222,12 +213,12 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
                 constraint
                     .variables
                     .iter()
-                    .any(|v| constraint_set.variables.contains(v))
+                    .any(|v| constraint_set.variables.contains(*v))
             })
             .unzip();
 
         // Combine all retrieved constraints into the first constraint
-        let constraint_set = sets.into_iter().reduce(|a, b| a.combine(b));
+        let constraint_set = sets.into_iter().reduce(|a, b| a.drain_from(b));
 
         // If a constraint set was found, insert the constraint set in it,
         // otherwise create a new set.
@@ -266,7 +257,7 @@ pub struct ConstraintSet<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
     pub constraints: Vec<Constraint<W, H>>,
     /// List of all the variables that are in this set of coupled constraints
-    pub variables: HashSet<Coord<W, H>>,
+    pub variables: CoordSet<W, H>,
 }
 impl<const W: usize, const H: usize> PartialEq for ConstraintSet<W, H> {
     fn eq(&self, other: &Self) -> bool {
@@ -278,11 +269,71 @@ impl<const W: usize, const H: usize> PartialEq for ConstraintSet<W, H> {
     }
 }
 
+/// Todo: Transfer me elsewhere
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct CoordSet<const W: usize, const H: usize> {
+    pub matrix: Matrix<bool, W, H>,
+}
+
+impl<const W: usize, const H: usize> CoordSet<W, H> {
+    /// TODO: Docs
+    pub fn insert(&mut self, coord: Coord<W, H>) {
+        self.matrix.set(coord, true);
+    }
+
+    /// TODO: Docs
+    pub fn contains(&self, coord: Coord<W, H>) -> bool {
+        self.matrix.get(coord)
+    }
+
+    /// TODO: Docs
+    pub fn iter(&mut self) -> impl Iterator<Item = Coord<W, H>> + '_ {
+        self.matrix
+            .0
+            .iter()
+            .flatten()
+            .enumerate()
+            .filter(|(_, c)| **c)
+            .map(|(i, _)| Coord((i % W) as u8, (i / W) as u8))
+    }
+
+    /// TODO: Docs
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&mut bool, Coord<W, H>)> + '_ {
+        self.matrix
+            .0
+            .iter_mut()
+            .flatten()
+            .enumerate()
+            .filter(|(_, c)| **c)
+            .map(|(i, c)| (c, Coord((i % W) as u8, (i / W) as u8)))
+    }
+
+    /// TODO: Docs
+    pub fn insert_many<T: Iterator<Item = Coord<W, H>>>(&mut self, coords: T) {
+        for coord in coords {
+            self.insert(coord);
+        }
+    }
+
+    /// TODO: Docs
+    pub fn extend(&mut self, other: &CoordSet<W, H>) {
+        for (a, b) in self
+            .matrix
+            .0
+            .iter_mut()
+            .flatten()
+            .zip(other.matrix.0.iter().flatten())
+        {
+            *a |= *b;
+        }
+    }
+}
+
 impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     /// TODO: Docs
-    pub fn combine(&mut self, other: &mut ConstraintSet<W, H>) -> &mut ConstraintSet<W, H> {
-        self.constraints.extend(other.constraints.iter().cloned());
-        self.variables.extend(other.variables.iter().cloned());
+    pub fn drain_from(&mut self, other: &mut ConstraintSet<W, H>) -> &mut ConstraintSet<W, H> {
+        self.constraints.append(&mut other.constraints);
+        self.variables.extend(&other.variables);
         self.constraints.sort();
         self.constraints.dedup();
         self
@@ -295,22 +346,23 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             variables,
         } = self;
 
-        let mut sets: Vec<ConstraintSet<W, H>> = Vec::with_capacity(10);
+        let mut sets: Vec<ConstraintSet<W, H>> = Vec::new();
 
         'outer: while let Some(constraint) = constraints.pop() {
             for set in &mut sets {
                 if constraint
                     .variables
                     .iter()
-                    .any(|v| set.variables.contains(v))
+                    .any(|v| set.variables.contains(*v))
                 {
-                    set.variables.extend(constraint.variables.iter());
+                    set.variables
+                        .insert_many(constraint.variables.iter().copied());
                     set.constraints.push(constraint);
                     continue 'outer;
                 }
             }
-            let mut variables = HashSet::with_capacity(variables.len());
-            variables.extend(constraint.variables.iter());
+            let mut variables = CoordSet::default();
+            variables.insert_many(constraint.variables.iter().copied());
             sets.push(ConstraintSet {
                 constraints: vec![constraint],
                 variables,
@@ -331,7 +383,8 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             if let Some(decisions) = self.solve_trivial_constraint(&constraint, known_field) {
                 Some(decisions)
             } else {
-                self.variables.extend(constraint.variables.iter());
+                self.variables
+                    .insert_many(constraint.variables.iter().copied());
                 self.constraints.push(constraint);
                 None
             }
@@ -347,11 +400,11 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         known_field: &KnownMinefield<W, H>,
     ) -> Vec<Decision<W, H>> {
         let mut decisions = Vec::new();
-        for var in self.variables.clone() {
-            if let CellContent::Known(val) = known_field.get(var) {
+        for (mut exists, coord) in self.variables.iter_mut() {
+            if let CellContent::Known(val) = known_field.get(coord) {
                 let mut idx = 0;
                 while let Some(constraint) = self.constraints.get_mut(idx) {
-                    while let Some(idx) = constraint.variables.iter().position(|v| *v == var) {
+                    while let Some(idx) = constraint.variables.iter().position(|v| *v == coord) {
                         constraint.variables.remove(idx);
                         constraint.label -= val as u8;
                     }
@@ -362,11 +415,11 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                     }
                 }
 
-                self.variables.remove(&var);
+                *exists = false;
                 if val {
-                    decisions.push(Decision::Flag(var));
+                    decisions.push(Decision::Flag(coord));
                 } else {
-                    decisions.push(Decision::Reveal(var));
+                    decisions.push(Decision::Reveal(coord));
                 }
             }
         }

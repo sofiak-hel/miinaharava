@@ -5,7 +5,7 @@ use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
 
 use crate::{
     ai::Decision,
-    csp::{CellContent, Constraint, ConstraintSatisficationState, ConstraintSet},
+    csp::{CellContent, Constraint, ConstraintSatisficationState, ConstraintSet, CoordSet},
 };
 
 const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
@@ -99,8 +99,8 @@ fn test_constraint_generation() {
 
     expected.sort();
 
-    let mut set = HashSet::new();
-    set.extend(expected.iter().flat_map(|c| c.variables.clone()));
+    let mut set = CoordSet::default();
+    set.insert_many(expected.iter().flat_map(|c| c.variables.clone()));
     let expected_set = ConstraintSet {
         constraints: expected,
         variables: set,
@@ -171,8 +171,8 @@ fn test_known_reduces() {
 
         expected.sort();
 
-        let mut set = HashSet::new();
-        set.extend(initial.iter().flat_map(|c| c.variables.clone()));
+        let mut set = CoordSet::default();
+        set.insert_many(initial.iter().flat_map(|c| c.variables.clone()));
         let mut initial_set = ConstraintSet {
             constraints: initial,
             variables: set,
@@ -234,8 +234,8 @@ fn test_trivial_cases() {
             // 2. Insert variables into the constrait, calculate label
             // multiplier = 0 = all of them are empty
             // multiplier = 1 = all of them are mines
-            let mut set = HashSet::new();
-            set.extend(variables.iter());
+            let mut set = CoordSet::default();
+            set.insert_many(variables.iter().cloned());
             let mut constraint_set = ConstraintSet {
                 constraints: vec![Constraint {
                     label: black_box(amount * multiplier),
@@ -342,7 +342,7 @@ fn test_clearing_known_variables() {
         // 2. Make sure the returned decisions are as expected
         let mut expected = Vec::new();
         for coord in &revealed {
-            if set.variables.contains(coord) {
+            if set.variables.contains(*coord) {
                 match known.get(*coord) {
                     CellContent::Known(true) => expected.push(Decision::Flag(*coord)),
                     CellContent::Known(false) => expected.push(Decision::Reveal(*coord)),
@@ -364,7 +364,7 @@ fn test_clearing_known_variables() {
                     .iter()
                     .flat_map(|c| c.variables.clone())
                     .collect();
-                assert!(!set.variables.contains(coord));
+                assert!(!set.variables.contains(*coord));
                 assert!(!true_variables.contains(coord));
             }
         }
@@ -420,8 +420,8 @@ fn generate_valid_constraints(mine_cap: u8) -> (ConstraintSet<10, 10>, Vec<Coord
         }
     });
     // Actually add create the constraint set
-    let mut set = HashSet::new();
-    set.extend(vec.iter().flat_map(|c| c.variables.clone()));
+    let mut set = CoordSet::default();
+    set.insert_many(vec.iter().flat_map(|c| c.variables.clone()));
     let constraint_set = ConstraintSet {
         constraints: vec,
         variables: set,
