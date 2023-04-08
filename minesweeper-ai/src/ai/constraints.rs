@@ -1,5 +1,5 @@
-//! This module contains everything related to specifically solving the
-//! Constraint Satisfaction Problem.
+//! TODO: Docs
+//! TODO: Tests for this module
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::Coord;

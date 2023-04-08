@@ -1,4 +1,5 @@
 //! TODO: Docs
+//! Also, TODO: Tests for this module
 use miinaharava::minefield::{Coord, Matrix};
 
 /// TODO: Docs
