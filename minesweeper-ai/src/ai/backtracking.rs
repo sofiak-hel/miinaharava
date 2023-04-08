@@ -7,7 +7,7 @@ use super::{
     CellContent, KnownMinefield,
 };
 
-type PossibleSolution<const W: usize, const H: usize> = Vec<(Coord<W, H>, bool)>;
+type PossibleSolution<const W: usize, const H: usize> = Vec<bool>;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 /// TODO: Docs
@@ -110,7 +110,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
         // dbg!(&ordered);
 
-        let mut results = self.test_both(&ordered, 0, *known_field)?;
+        let mut results = self.test_both(&ordered, Vec::new(), *known_field)?;
         results.sort();
         results.dedup();
 
@@ -120,7 +120,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             max_mines: 0,
         };
         for result in results {
-            let mine_count = result.iter().filter(|c| c.1).count() as u8;
+            let mine_count = result.iter().filter(|c| **c).count() as u8;
             if mine_count <= remaining_mines {
                 unsafe {
                     returned
@@ -141,11 +141,11 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     fn test_both(
         &self,
         list: &[(Coord<W, H>, &ArrayVec<usize, 8>)],
-        idx: usize,
+        history: Vec<bool>,
         testing_field: KnownMinefield<W, H>,
     ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
-        let res2 = self.test(false, list, idx, testing_field);
-        let res1 = self.test(true, list, idx, testing_field);
+        let res2 = self.test(false, list, history.clone(), testing_field);
+        let res1 = self.test(true, list, history, testing_field);
         if let (Err(_), Err(_)) = (&res1, &res2) {
             Err(())?;
         }
@@ -157,6 +157,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         if let Ok(res) = res2 {
             results.extend(res);
         }
+        results.dedup();
         Ok(results)
     }
 
@@ -165,10 +166,10 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         &self,
         guess: bool,
         list: &[(Coord<W, H>, &ArrayVec<usize, 8>)],
-        idx: usize,
+        mut history: Vec<bool>,
         mut testing_field: KnownMinefield<W, H>,
     ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
-        if let Some((coord, idx_vec)) = list.get(idx) {
+        if let Some((coord, idx_vec)) = list.get(history.len()) {
             // dbg!("guessing", guess, &coord);
             testing_field.set(*coord, CellContent::Known(guess));
             for idx in *idx_vec {
@@ -182,18 +183,10 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                     Err(())?;
                 }
             }
-            let mut results = self.test_both(list, idx + 1, testing_field)?;
-            for res in &mut results {
-                res.push((*coord, guess));
-            }
-            // dbg!("success:", &results);
-            Ok(results)
+            history.push(guess);
+            self.test_both(list, history, testing_field)
         } else {
-            let mut outer_vec = Vec::with_capacity(idx.pow(2) + 1);
-            let res = Vec::with_capacity(list.len());
-            outer_vec.push(res);
-            // dbg!("Ending found");
-            Ok(outer_vec)
+            Ok(vec![history])
         }
     }
 }
