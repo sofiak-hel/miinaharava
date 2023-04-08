@@ -192,7 +192,7 @@ fn test_trivial_solver_on_nontrivial() {
 
         // 2. Generate constraints that always have a different label than the
         // number of variables thus making them nontrivial
-        set.insert(
+        let _ = set.insert(
             Constraint {
                 label: black_box((rand::random::<u8>() % 100 + 9) ^ amount),
                 variables: variables.clone(),

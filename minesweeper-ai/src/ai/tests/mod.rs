@@ -114,6 +114,15 @@ fn test_csp_reveals() {
     assert_eq!(*state.constraint_sets.0.get(0).unwrap(), expected_set);
 }
 
+#[test]
+fn guess_is_a_corner() {
+    for _ in 0..100 {
+        let minefield = Minefield::<10, 10>::generate(10).unwrap();
+        let decision = guess(&minefield);
+        assert!(matches!(decision, Decision::Reveal(Coord(0 | 9, 0 | 9))));
+    }
+}
+
 fn into_constraint_vec(array: &[(u8, &[Coord<7, 7>])]) -> Vec<Constraint<7, 7>> {
     array
         .iter()
@@ -122,13 +131,4 @@ fn into_constraint_vec(array: &[(u8, &[Coord<7, 7>])]) -> Vec<Constraint<7, 7>> 
             variables: ArrayVec::try_from(i.1).unwrap(),
         })
         .collect()
-}
-
-#[test]
-fn guess_is_a_corner() {
-    for _ in 0..100 {
-        let minefield = Minefield::<10, 10>::generate(10).unwrap();
-        let decision = guess(&minefield);
-        assert!(matches!(decision, Decision::Reveal(Coord(0 | 9, 0 | 9))));
-    }
 }

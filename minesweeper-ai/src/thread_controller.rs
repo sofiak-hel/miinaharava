@@ -199,7 +199,10 @@ pub struct State<const W: usize, const H: usize> {
     pub stats: StateStats,
     /// The current stack of decisions from the last ponder.
     decisions: Vec<Decision<W, H>>,
+    /// Represents all the latest reveals from the minefield reveals, to be
+    /// given for the AI to process.
     reveals: Vec<Reveal<W, H>>,
+    /// Represents the state of the CSP-solver AI
     csp_state: CSPState<W, H>,
 }
 

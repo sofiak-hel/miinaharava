@@ -4,6 +4,7 @@ use miinaharava::minefield::{Coord, Matrix};
 /// TODO: Docs
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct CoordSet<const W: usize, const H: usize> {
+    /// Inner matrix
     pub matrix: Matrix<bool, W, H>,
 }
 
@@ -24,6 +25,7 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
     }
 
     /// TODO: Docs
+    #[allow(dead_code)]
     pub fn iter(&mut self) -> impl Iterator<Item = Coord<W, H>> + '_ {
         self.matrix
             .0
@@ -35,6 +37,7 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
     }
 
     /// TODO: Docs
+    #[allow(dead_code)]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (&mut bool, Coord<W, H>)> + '_ {
         self.matrix
             .0

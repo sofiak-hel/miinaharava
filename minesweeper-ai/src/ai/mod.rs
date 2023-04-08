@@ -14,9 +14,12 @@ pub mod coord_set;
 mod tests;
 
 #[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord)]
+/// Describes cell content in a known field according to the AI state
 pub enum CellContent {
+    /// AI thinks this cell is (true = a mine, false = not a mine)
     Known(bool),
     #[default]
+    /// AI does not know what is in this cell
     Unknown,
 }
 
@@ -29,6 +32,7 @@ pub enum Decision<const W: usize, const H: usize> {
     Reveal(Coord<W, H>),
 }
 
+/// Represents the AI state's own opinion on fields
 pub type KnownMinefield<const W: usize, const H: usize> = Matrix<CellContent, W, H>;
 
 /// General state used for solving Constraint Satisfication Problem
@@ -36,6 +40,8 @@ pub type KnownMinefield<const W: usize, const H: usize> = Matrix<CellContent, W,
 pub struct CSPState<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
     pub constraint_sets: CoupledSets<W, H>,
+    /// Represents the current state of the minefield, according to the AI. Not
+    /// guarenteed to be correct.
     pub known_fields: KnownMinefield<W, H>,
 }
 
