@@ -353,7 +353,9 @@ fn test_clearing_known_variables() {
         expected.sort();
         expected.dedup();
 
-        let decisions = set.clear_known_variables(&known);
+        let mut decisions = set.clear_known_variables(&known);
+        decisions.sort();
+        decisions.dedup();
         assert_eq!(decisions, expected);
 
         // 3. Make sure all revealed fields are actually removed

@@ -1,3 +1,4 @@
+//! TODO: Docs
 use super::{constraints::Constraint, coord_set::CoordSet, CellContent, Decision, KnownMinefield};
 
 #[derive(Debug, Clone, Default)]
@@ -92,7 +93,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     pub fn check_splits(self) -> Vec<ConstraintSet<W, H>> {
         let ConstraintSet {
             mut constraints,
-            variables,
+            variables: _,
         } = self;
 
         let mut sets: Vec<ConstraintSet<W, H>> = Vec::new();
@@ -172,8 +173,6 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                 }
             }
         }
-        decisions.sort();
-        decisions.dedup();
 
         decisions
     }

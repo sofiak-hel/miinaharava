@@ -1,4 +1,4 @@
-//!: TODO: Docs
+//! TODO: Docs
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Cell, Coord, Matrix, Minefield, Reveal};

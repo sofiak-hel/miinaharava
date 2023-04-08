@@ -11,7 +11,7 @@ use std::fmt::Debug;
 ///
 /// In concrete terms, variables are hidden unflagged cells and the label is how many
 /// mines are still undiscovered in said cells.
-#[derive(Clone, PartialOrd, Ord, Eq, Default)]
+#[derive(Clone, Eq, Default)]
 pub struct Constraint<const W: usize, const H: usize> {
     /// Value or label for the variables
     pub label: u8,
@@ -71,5 +71,23 @@ impl<const W: usize, const H: usize> PartialEq for Constraint<W, H> {
         a.sort();
         b.sort();
         a == b && self.label == other.label
+    }
+}
+
+use std::cmp::Ordering;
+
+impl<const W: usize, const H: usize> PartialOrd for Constraint<W, H> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<const W: usize, const H: usize> Ord for Constraint<W, H> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.len().cmp(&other.len()) {
+            Ordering::Equal => self.variables.cmp(&other.variables),
+            Ordering::Greater => Ordering::Greater,
+            Ordering::Less => Ordering::Less,
+        }
     }
 }

@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use miinaharava::minefield::{Coord, GameState, Minefield};
-use minesweeper_ai::{ai::Decision::*, csp::ConstraintSatisficationState};
+use minesweeper_ai::ai::{ConstraintSatisficationState, Decision::*};
 
 pub fn benchmark_specific_difficulty<const W: usize, const H: usize>(mines: u8) {
     let mut minefield = Minefield::<W, H>::generate(mines).unwrap();
