@@ -1,4 +1,7 @@
-use std::{collections::HashSet, hint::black_box};
+use std::{
+    collections::{BinaryHeap, HashSet},
+    hint::black_box,
+};
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
@@ -407,9 +410,11 @@ fn generate_valid_constraints(mine_cap: u8) -> (ConstraintSet<10, 10>, Vec<Coord
     let mut vec = vec![Constraint::<10, 10>::default(); amount as usize];
     vec.fill_with(|| {
         let amount = black_box(rand::random::<u8>() % 8 + 1);
-        let vec = vec![Coord::<10, 10>(0, 0); amount as usize];
-        let mut variables = ArrayVec::try_from(&*vec).unwrap();
-        variables.fill_with(Coord::random);
+        let mut vec = vec![Coord::<10, 10>(0, 0); amount as usize];
+        vec.fill_with(Coord::random);
+        vec.sort();
+        vec.dedup();
+        let variables = ArrayVec::try_from(&*vec).unwrap();
         Constraint {
             // Make sure label is always correct
             label: variables

@@ -9,6 +9,6 @@
 
 ### Thu 06.04.2023
 
-#### 18:00
+#### 18:00 - 23:00
 - Made tests for reduce-function
-- Next attemept at optimizing
+- Optimized a bunch, did the thing that I tried to do on wednesday but failed.

@@ -400,7 +400,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         known_field: &KnownMinefield<W, H>,
     ) -> Vec<Decision<W, H>> {
         let mut decisions = Vec::new();
-        for (mut exists, coord) in self.variables.iter_mut() {
+        for (exists, coord) in self.variables.iter_mut() {
             if let CellContent::Known(val) = known_field.get(coord) {
                 let mut idx = 0;
                 while let Some(constraint) = self.constraints.get_mut(idx) {
@@ -479,6 +479,15 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         let mut edited = true;
         while edited {
             edited = false;
+            // TODOS:
+            // 1. self.constraints could be a HashSet with a priority queue?
+            // 2. tests are broken because constraints aren't checked for
+            //    duplicates again
+            // 3. make tests for CoordSet
+            // 4. implement Ord/partialOrd for constraint, which #1 orders by
+            //    length, and when len are the same, order by the default method
+            //    (?) for dedup
+            // 5. Might be possible to combine trivial-solving and clearing known variables
             self.constraints.sort_by_key(|i| i.len());
 
             for smallest_idx in 0..self.constraints.len() {
