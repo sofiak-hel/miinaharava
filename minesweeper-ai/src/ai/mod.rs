@@ -72,22 +72,21 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
                 .set(*coord, CellContent::Known(*cell == Cell::Mine))
         }
         for (coord, cell) in &reveals {
-            if let Cell::Label(num) = cell {
+            if let Cell::Label(mut label) = cell {
                 let mut neighbors = ArrayVec::new();
                 for neighbor in coord.neighbours().iter() {
-                    // TODO: Possible optimization for later
-                    // match minefield.field.get(*neighbor) {
-                    //     Cell::Flag => num -= 1,
-                    //     Cell::Hidden => neighbors.push(*neighbor),
-                    //     _ => {}
-                    // };
-                    if matches!(minefield.field.get(*neighbor), Cell::Flag | Cell::Hidden) {
-                        neighbors.push(*neighbor);
+                    match (
+                        minefield.field.get(*neighbor),
+                        self.known_fields.get(*neighbor),
+                    ) {
+                        (Cell::Flag, _) | (_, CellContent::Known(true)) => label -= 1,
+                        (Cell::Hidden, _) => neighbors.push(*neighbor),
+                        _ => {}
                     }
                 }
                 if !neighbors.is_empty() {
                     let constraint = Constraint {
-                        label: *num,
+                        label,
                         variables: neighbors,
                     };
                     if let Some(res) = self
