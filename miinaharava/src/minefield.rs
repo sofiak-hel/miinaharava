@@ -101,23 +101,14 @@ impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
     /// Get element in position of Coord from the matrix
     #[inline]
     pub fn get(&self, coord: Coord<W, H>) -> T {
-        unsafe {
-            *self
-                .0
-                .get_unchecked(coord.1 as usize)
-                .get_unchecked(coord.0 as usize)
-        }
+        dbg!(coord);
+        self.0[coord.1 as usize][coord.0 as usize]
     }
 
     /// Set element in position of Coord from the matrix
     #[inline]
     pub fn set(&mut self, coord: Coord<W, H>, item: T) {
-        unsafe {
-            *self
-                .0
-                .get_unchecked_mut(coord.1 as usize)
-                .get_unchecked_mut(coord.0 as usize) = item;
-        }
+        self.0[coord.1 as usize][coord.0 as usize] = item;
     }
 
     /// Return an iterator for the rows

@@ -75,7 +75,7 @@ jobs:
       - name:                   Generate code coverage
         run: |
           cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml \
-          --exclude-files='miinaharava/src/minefield_renderer.rs,miinaharava/src/game.rs,miinaharava/src/main.rs,minesweeper-ai/src/main.rs,minesweeper-ai/src/thread_controller.rs' --engine Llvm
+          --exclude-files='miinaharava/src/minefield_renderer.rs,miinaharava/src/game.rs,miinaharava/src/main.rs,minesweeper-ai/src/main.rs,minesweeper-ai/src/thread_controller.rs,minesweeper-ai/benches/ai.rs' --engine Llvm
       - name:                   Upload to codecov.io
         uses:                   codecov/codecov-action@v2
         with:

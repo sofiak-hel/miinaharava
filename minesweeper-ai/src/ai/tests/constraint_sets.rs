@@ -12,6 +12,55 @@ use crate::ai::{
 use super::into_constraint_vec;
 
 #[test]
+fn test_drain() {
+    let mut set1 = ConstraintSet::<7, 7>::default();
+    let mut set2 = ConstraintSet::<7, 7>::default();
+    let mut known = Matrix([[CellContent::Unknown; 7]; 7]);
+
+    const A: Coord<7, 7> = Coord(4, 2);
+    const B: Coord<7, 7> = Coord(5, 2);
+    const C: Coord<7, 7> = Coord(6, 2);
+    const D: Coord<7, 7> = Coord(0, 5);
+    const E: Coord<7, 7> = Coord(6, 5);
+    const F: Coord<7, 7> = Coord(0, 2);
+    const G: Coord<7, 7> = Coord(3, 6);
+
+    for constraint in into_constraint_vec(&[(1, &[A, B]), (2, &[A, B, C, D])]) {
+        let _ = set1.insert(constraint, &mut known);
+    }
+    for constraint in into_constraint_vec(&[(1, &[E, F]), (2, &[G, E, A, B]), (1, &[A, B])]) {
+        dbg!(&known);
+        let _ = set2.insert(constraint, &mut known);
+    }
+    dbg!(&set1);
+    dbg!(&set2);
+
+    let mut vec = into_constraint_vec(&[
+        (1, &[A, B]),
+        (2, &[A, B, C, D]),
+        (1, &[E, F]),
+        (2, &[G, E, A, B]),
+    ]);
+
+    vec.sort();
+    vec.dedup();
+    dbg!(&vec);
+
+    let mut coords = CoordSet::default();
+    coords.insert_many(vec.iter().cloned().flat_map(|c| c.variables));
+
+    set1.drain_from(&mut set2);
+
+    let mut constraints = set1.constraints;
+    constraints.sort();
+    constraints.dedup();
+
+    assert_eq!(set2.constraints.len(), 0);
+    assert_eq!(constraints, vec);
+    assert_eq!(set1.variables, coords);
+}
+
+#[test]
 fn test_known_reduces() {
     let known = vec![
         (
@@ -25,7 +74,7 @@ fn test_known_reduces() {
                 (2, &[Coord(3, 3), Coord(4, 3), Coord(5, 3), Coord(5, 2)]),
                 (1, &[Coord(5, 2)]),
                 (1, &[Coord(5, 2), Coord(6, 2)]),
-                (2, &[Coord(5, 2), Coord(6, 2), Coord(7, 2)]),
+                (2, &[Coord(5, 2), Coord(6, 2), Coord(2, 2)]),
             ]),
             into_constraint_vec(&[
                 (1, &[Coord(0, 3), Coord(1, 3)]),
@@ -35,31 +84,31 @@ fn test_known_reduces() {
                 (0, &[Coord(5, 3)]),
                 (1, &[Coord(5, 2)]),
                 (0, &[Coord(6, 2)]),
-                (1, &[Coord(7, 2)]),
+                (1, &[Coord(2, 2)]),
             ]),
         ),
         (
             into_constraint_vec(&[
                 (1, &[Coord(5, 2)]),
                 (1, &[Coord(5, 2), Coord(6, 2)]),
-                (2, &[Coord(5, 2), Coord(6, 2), Coord(7, 2)]),
+                (2, &[Coord(5, 2), Coord(6, 2), Coord(2, 2)]),
             ]),
             into_constraint_vec(&[
                 (1, &[Coord(5, 2)]),
                 (0, &[Coord(6, 2)]),
-                (1, &[Coord(7, 2)]),
+                (1, &[Coord(2, 2)]),
             ]),
         ),
         (
             into_constraint_vec(&[
                 (1, &[]),
                 (1, &[Coord(5, 2), Coord(6, 2)]),
-                (2, &[Coord(5, 2), Coord(6, 2), Coord(7, 2)]),
+                (2, &[Coord(5, 2), Coord(6, 2), Coord(2, 2)]),
             ]),
             into_constraint_vec(&[
                 (1, &[]),
                 (1, &[Coord(5, 2), Coord(6, 2)]),
-                (1, &[Coord(7, 2)]),
+                (1, &[Coord(2, 2)]),
             ]),
         ),
     ];

@@ -89,6 +89,27 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         self
     }
 
+    /// TODO: Docs
+    #[must_use]
+    pub fn insert(
+        &mut self,
+        mut constraint: Constraint<W, H>,
+        known_field: &mut KnownMinefield<W, H>,
+    ) -> Option<Vec<Decision<W, H>>> {
+        if !constraint.is_empty() && !self.constraints.contains(&constraint) {
+            if let Some(d) = ConstraintSet::solve_trivial_constraint(&mut constraint, known_field) {
+                Some(d)
+            } else {
+                self.variables
+                    .insert_many(constraint.variables.iter().copied());
+                self.constraints.push(constraint);
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     /// TOOD: Docs
     pub fn check_splits(self) -> Vec<ConstraintSet<W, H>> {
         let ConstraintSet {
@@ -120,27 +141,6 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         }
 
         sets
-    }
-
-    /// TODO: Docs
-    #[must_use]
-    pub fn insert(
-        &mut self,
-        mut constraint: Constraint<W, H>,
-        known_field: &mut KnownMinefield<W, H>,
-    ) -> Option<Vec<Decision<W, H>>> {
-        if !constraint.is_empty() && !self.constraints.contains(&constraint) {
-            if let Some(d) = ConstraintSet::solve_trivial_constraint(&mut constraint, known_field) {
-                Some(d)
-            } else {
-                self.variables
-                    .insert_many(constraint.variables.iter().copied());
-                self.constraints.push(constraint);
-                None
-            }
-        } else {
-            None
-        }
     }
 
     /// Solves trivial cases, meaning that it will reveal all variables that
