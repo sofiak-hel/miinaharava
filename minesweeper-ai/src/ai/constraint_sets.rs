@@ -130,9 +130,8 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         known_field: &mut KnownMinefield<W, H>,
     ) -> Option<Vec<Decision<W, H>>> {
         if !constraint.is_empty() && !self.constraints.contains(&constraint) {
-            let decisions = ConstraintSet::solve_trivial_constraint(&mut constraint, known_field);
-            if !decisions.is_empty() {
-                Some(decisions)
+            if let Some(d) = ConstraintSet::solve_trivial_constraint(&mut constraint, known_field) {
+                Some(d)
             } else {
                 self.variables
                     .insert_many(constraint.variables.iter().copied());
@@ -188,8 +187,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         let mut decisions = Vec::new();
         let mut idx = 0;
         while let Some(constraint) = self.constraints.get_mut(idx) {
-            let d = ConstraintSet::solve_trivial_constraint(constraint, known_field);
-            if !d.is_empty() {
+            if let Some(d) = ConstraintSet::solve_trivial_constraint(constraint, known_field) {
                 decisions.extend(d);
                 self.constraints.remove(idx);
             } else {
@@ -204,39 +202,34 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     pub fn solve_trivial_constraint(
         constraint: &mut Constraint<W, H>,
         known_field: &mut KnownMinefield<W, H>,
-    ) -> Vec<Decision<W, H>> {
+    ) -> Option<Vec<Decision<W, H>>> {
         let mut decisions = Vec::new();
-        let mut old_decision_len = 0;
 
-        while {
-            let mut idx = 0;
-            while let Some(var) = constraint.variables.get(idx) {
-                if let CellContent::Known(val) = known_field.get(*var) {
-                    constraint.label -= val as u8;
-                    constraint.variables.remove(idx);
-                } else {
-                    idx += 1;
-                }
-            }
-
-            if constraint.label == 0 {
-                for variable in &constraint.variables {
-                    known_field.set(*variable, CellContent::Known(false));
-                    decisions.push(Decision::Reveal(*variable));
-                }
-            } else if constraint.label as usize == constraint.variables.len() {
-                for variable in &constraint.variables {
-                    known_field.set(*variable, CellContent::Known(true));
-                    decisions.push(Decision::Flag(*variable));
-                }
+        let mut idx = 0;
+        while let Some(var) = constraint.variables.get(idx) {
+            if let CellContent::Known(val) = known_field.get(*var) {
+                constraint.label -= val as u8;
+                constraint.variables.remove(idx);
             } else {
+                idx += 1;
             }
-
-            old_decision_len > decisions.len()
-        } {
-            old_decision_len = decisions.len();
         }
-        decisions
+
+        if constraint.label == 0 {
+            for variable in &constraint.variables {
+                known_field.set(*variable, CellContent::Known(false));
+                decisions.push(Decision::Reveal(*variable));
+            }
+            Some(decisions)
+        } else if constraint.label as usize == constraint.variables.len() {
+            for variable in &constraint.variables {
+                known_field.set(*variable, CellContent::Known(true));
+                decisions.push(Decision::Flag(*variable));
+            }
+            Some(decisions)
+        } else {
+            None
+        }
     }
 
     /// TODO: Docs
