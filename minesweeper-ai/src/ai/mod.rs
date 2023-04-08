@@ -6,6 +6,7 @@ use rand::seq::SliceRandom;
 
 use self::{constraint_sets::CoupledSets, constraints::Constraint};
 
+pub mod backtracking;
 pub mod constraint_sets;
 pub mod constraints;
 pub mod coord_set;
