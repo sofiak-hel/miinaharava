@@ -70,6 +70,7 @@ pub struct ConstraintSet<const W: usize, const H: usize> {
     /// List of all the variables that are in this set of coupled constraints
     pub variables: CoordSet<W, H>,
 }
+
 impl<const W: usize, const H: usize> PartialEq for ConstraintSet<W, H> {
     fn eq(&self, other: &Self) -> bool {
         let mut a = self.constraints.clone();
