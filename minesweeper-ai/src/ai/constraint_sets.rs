@@ -36,7 +36,8 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
             set.insert(constraint, known_minefield)
         } else {
             self.0.push(ConstraintSet::default());
-            let set = self.0.get_mut(0).unwrap();
+            let last_idx = self.0.len() - 1;
+            let set = self.0.get_mut(last_idx).unwrap();
             set.insert(constraint, known_minefield)
         };
 

@@ -132,3 +132,10 @@ fn into_constraint_vec(array: &[(u8, &[Coord<7, 7>])]) -> Vec<Constraint<7, 7>> 
         })
         .collect()
 }
+
+fn into_constraint(label: u8, coords: &[Coord<7, 7>]) -> Constraint<7, 7> {
+    Constraint {
+        label,
+        variables: ArrayVec::try_from(coords).unwrap(),
+    }
+}

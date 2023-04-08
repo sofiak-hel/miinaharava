@@ -5,25 +5,29 @@ use miinaharava::minefield::{Coord, Matrix};
 use rand::seq::SliceRandom;
 
 use crate::ai::{
-    constraint_sets::ConstraintSet, constraints::Constraint, coord_set::CoordSet, CellContent,
-    Decision,
+    constraint_sets::{ConstraintSet, CoupledSets},
+    constraints::Constraint,
+    coord_set::CoordSet,
+    CellContent, Decision,
 };
 
-use super::into_constraint_vec;
+use super::{into_constraint, into_constraint_vec};
+
+const A: Coord<7, 7> = Coord(4, 2);
+const B: Coord<7, 7> = Coord(5, 2);
+const C: Coord<7, 7> = Coord(6, 2);
+const D: Coord<7, 7> = Coord(0, 5);
+const E: Coord<7, 7> = Coord(6, 5);
+const F: Coord<7, 7> = Coord(0, 2);
+const G: Coord<7, 7> = Coord(3, 6);
+const H: Coord<7, 7> = Coord(0, 6);
+const I: Coord<7, 7> = Coord(6, 6);
 
 #[test]
 fn test_drain() {
     let mut set1 = ConstraintSet::<7, 7>::default();
     let mut set2 = ConstraintSet::<7, 7>::default();
     let mut known = Matrix([[CellContent::Unknown; 7]; 7]);
-
-    const A: Coord<7, 7> = Coord(4, 2);
-    const B: Coord<7, 7> = Coord(5, 2);
-    const C: Coord<7, 7> = Coord(6, 2);
-    const D: Coord<7, 7> = Coord(0, 5);
-    const E: Coord<7, 7> = Coord(6, 5);
-    const F: Coord<7, 7> = Coord(0, 2);
-    const G: Coord<7, 7> = Coord(3, 6);
 
     for constraint in into_constraint_vec(&[(1, &[A, B]), (2, &[A, B, C, D])]) {
         let _ = set1.insert(constraint, &mut known);
@@ -61,55 +65,58 @@ fn test_drain() {
 }
 
 #[test]
+fn test_set_insert_combine() {
+    let mut sets = CoupledSets::<7, 7>::default();
+    let mut known = Matrix([[CellContent::Unknown; 7]; 7]);
+
+    let _ = sets.insert(into_constraint(5, &[A]), &mut known);
+    let _ = sets.insert(into_constraint(4, &[B]), &mut known);
+
+    dbg!(&sets);
+    assert_eq!(sets.0.len(), 2);
+    assert!(sets.0.get(0).unwrap().variables.contains(A));
+    assert!(sets.0.get(1).unwrap().variables.contains(B));
+
+    let _ = sets.insert(into_constraint(9, &[A, B]), &mut known);
+    assert_eq!(sets.0.len(), 1);
+    assert!(sets.0.get(0).unwrap().variables.contains(A));
+    assert!(sets.0.get(0).unwrap().variables.contains(B));
+}
+
+#[test]
 fn test_known_reduces() {
     let known = vec![
         (
             into_constraint_vec(&[
-                (1, &[Coord(0, 3), Coord(1, 3)]),
-                (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
-                (1, &[Coord(0, 3), Coord(1, 3)]),
-                (1, &[Coord(0, 3), Coord(1, 3), Coord(2, 3)]),
-                (1, &[Coord(1, 3), Coord(2, 3), Coord(3, 3)]),
-                (1, &[Coord(2, 3), Coord(3, 3), Coord(4, 3)]),
-                (2, &[Coord(3, 3), Coord(4, 3), Coord(5, 3), Coord(5, 2)]),
-                (1, &[Coord(5, 2)]),
-                (1, &[Coord(5, 2), Coord(6, 2)]),
-                (2, &[Coord(5, 2), Coord(6, 2), Coord(2, 2)]),
+                (1, &[A, B]),
+                (1, &[A, B, C]),
+                (1, &[A, B]),
+                (1, &[A, B, C]),
+                (1, &[B, C, D]),
+                (1, &[C, D, E]),
+                (2, &[D, E, F, G]),
+                (1, &[G]),
+                (1, &[G, H]),
+                (2, &[G, H, I]),
             ]),
             into_constraint_vec(&[
-                (1, &[Coord(0, 3), Coord(1, 3)]),
-                (0, &[Coord(2, 3)]),
-                (1, &[Coord(1, 3), Coord(3, 3)]),
-                (1, &[Coord(3, 3), Coord(4, 3)]),
-                (0, &[Coord(5, 3)]),
-                (1, &[Coord(5, 2)]),
-                (0, &[Coord(6, 2)]),
-                (1, &[Coord(2, 2)]),
+                (1, &[A, B]),
+                (0, &[C]),
+                (1, &[B, D]),
+                (1, &[D, E]),
+                (0, &[F]),
+                (1, &[G]),
+                (0, &[H]),
+                (1, &[I]),
             ]),
         ),
         (
-            into_constraint_vec(&[
-                (1, &[Coord(5, 2)]),
-                (1, &[Coord(5, 2), Coord(6, 2)]),
-                (2, &[Coord(5, 2), Coord(6, 2), Coord(2, 2)]),
-            ]),
-            into_constraint_vec(&[
-                (1, &[Coord(5, 2)]),
-                (0, &[Coord(6, 2)]),
-                (1, &[Coord(2, 2)]),
-            ]),
+            into_constraint_vec(&[(1, &[A]), (1, &[A, B]), (2, &[A, B, C])]),
+            into_constraint_vec(&[(1, &[A]), (0, &[B]), (1, &[C])]),
         ),
         (
-            into_constraint_vec(&[
-                (1, &[]),
-                (1, &[Coord(5, 2), Coord(6, 2)]),
-                (2, &[Coord(5, 2), Coord(6, 2), Coord(2, 2)]),
-            ]),
-            into_constraint_vec(&[
-                (1, &[]),
-                (1, &[Coord(5, 2), Coord(6, 2)]),
-                (1, &[Coord(2, 2)]),
-            ]),
+            into_constraint_vec(&[(1, &[]), (1, &[A, B]), (2, &[A, B, C])]),
+            into_constraint_vec(&[(1, &[]), (1, &[A, B]), (1, &[C])]),
         ),
     ];
 

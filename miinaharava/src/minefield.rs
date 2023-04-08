@@ -101,7 +101,6 @@ impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
     /// Get element in position of Coord from the matrix
     #[inline]
     pub fn get(&self, coord: Coord<W, H>) -> T {
-        dbg!(coord);
         self.0[coord.1 as usize][coord.0 as usize]
     }
 
