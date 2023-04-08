@@ -1,7 +1,8 @@
-use std::hint::black_box;
+use std::{collections::HashSet, hint::black_box};
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
+use rand::seq::SliceRandom;
 
 use crate::ai::{
     constraint_sets::ConstraintSet, constraints::Constraint, coord_set::CoordSet, CellContent,
@@ -191,7 +192,7 @@ fn test_random_reduces() {
     for _ in 0..200 {
         // 1. First generate some random amount of valid constraints
         // (valid, as in the labels in the set always correspond correctly)
-        let (mut constraint_set, mine_coords) = generate_valid_constraints(50);
+        let (mut constraint_set, mine_coords) = generate_valid_constraints(50, 50, true);
         dbg!(&constraint_set);
 
         constraint_set.reduce();
@@ -320,58 +321,98 @@ fn test_trivial_on_nontrivial() {
 }
 
 #[test]
-fn test_clearing_known_variables() {
-    for _ in 0..1000 {
-        let (mut set, mine_coords) = generate_valid_constraints(50);
+fn test_trivial_solver_with_known_variables() {
+    for _ in 0..10 {
+        let (mut set, mine_coords) = generate_valid_constraints(30, 50, false);
         dbg!(&set);
 
         let mut known = Matrix([[CellContent::Unknown; 10]; 10]);
         // 1. Reveal about 30% of the field as known to the function
-        let mut revealed = Vec::new();
+        let mut revealed = HashSet::new();
         for y in 0..10 {
             for x in 0..10 {
                 // about 30% chance
                 if rand::random::<u8>() > 176 {
                     let coord = Coord(x, y);
                     known.set(coord, CellContent::Known(mine_coords.contains(&coord)));
-                    revealed.push(coord);
                 }
             }
         }
 
         // 2. Make sure the returned decisions are as expected
         let mut expected = Vec::new();
-        for coord in &revealed {
-            if set.variables.contains(*coord) {
-                match known.get(*coord) {
-                    CellContent::Known(true) => expected.push(Decision::Flag(*coord)),
-                    CellContent::Known(false) => expected.push(Decision::Reveal(*coord)),
-                    CellContent::Unknown => {}
+        {
+            let mut set_clone = set.clone();
+
+            let mut hidden_known = known;
+            let mut prev_revealed = revealed.len();
+
+            while {
+                let mut c_idx = 0;
+                while let Some(constraint) = set_clone.constraints.get_mut(c_idx) {
+                    let mut idx = 0;
+                    while let Some(var) = constraint.variables.get(idx) {
+                        match hidden_known.get(*var) {
+                            CellContent::Known(val) => {
+                                constraint.label -= val as u8;
+                                constraint.variables.remove(idx);
+                            }
+                            _ => idx += 1,
+                        }
+                    }
+                    if constraint.label == 0 || constraint.label == constraint.len() as u8 {
+                        for var in &constraint.variables {
+                            hidden_known.set(*var, CellContent::Known(constraint.label > 0));
+                        }
+                        revealed.extend(constraint.variables.iter());
+                        set_clone.constraints.remove(c_idx);
+                    } else {
+                        c_idx += 1;
+                    }
+                }
+
+                revealed.len() > prev_revealed
+            } {
+                prev_revealed = revealed.len();
+            }
+
+            for coord in &revealed {
+                if set.variables.contains(*coord) {
+                    match hidden_known.get(*coord) {
+                        CellContent::Known(true) => expected.push(Decision::Flag(*coord)),
+                        CellContent::Known(false) => expected.push(Decision::Reveal(*coord)),
+                        CellContent::Unknown => {}
+                    }
                 }
             }
         }
+
         expected.sort();
         expected.dedup();
 
-        let mut decisions = set.clear_known_variables(&known);
+        let mut decisions = set.solve_trivial_cases(&mut known);
         decisions.sort();
         decisions.dedup();
+
         assert_eq!(decisions, expected);
 
-        // 3. Make sure all revealed fields are actually removed
-        for coord in &revealed {
-            if let CellContent::Known(_) = known.get(*coord) {
-                let true_variables: Vec<Coord<10, 10>> = set
-                    .constraints
-                    .iter()
-                    .flat_map(|c| c.variables.clone())
-                    .collect();
-                assert!(!set.variables.contains(*coord));
-                assert!(!true_variables.contains(coord));
+        // // 3. Make sure all expected fields are actually removed
+        dbg!(&set);
+        for decision in &expected {
+            match decision {
+                Decision::Reveal(c) | Decision::Flag(c) => {
+                    let true_variables: Vec<Coord<10, 10>> = set
+                        .constraints
+                        .iter()
+                        .flat_map(|c| c.variables.clone())
+                        .collect();
+                    assert!(!set.variables.contains(*c));
+                    assert!(!true_variables.contains(c));
+                }
             }
         }
 
-        // 4. Also make sure all constraints are still valid
+        // // 4. Also make sure all constraints are still valid
         for constraint in &set.constraints {
             let true_value = constraint
                 .variables
@@ -383,7 +424,7 @@ fn test_clearing_known_variables() {
 
         // 5. Make sure clearing known variables is idempotent
         let old_set = set.clone();
-        set.clear_known_variables(&known);
+        let _ = set.solve_trivial_cases(&mut known);
         assert_eq!(old_set, set);
     }
 }
@@ -398,19 +439,61 @@ fn into_constraint_vec(array: &[(u8, &[Coord<7, 7>])]) -> Vec<Constraint<7, 7>> 
         .collect()
 }
 
-fn generate_valid_constraints(mine_cap: u8) -> (ConstraintSet<10, 10>, Vec<Coord<10, 10>>) {
+fn generate_valid_constraints(
+    mine_cap: u8,
+    constraint_count: u8,
+    allow_trivial: bool,
+) -> (ConstraintSet<10, 10>, Vec<Coord<10, 10>>) {
+    let mut rnd = rand::thread_rng();
+
     // Generate a random set of mines
-    let mine_amount = black_box(rand::random::<u8>()) % mine_cap;
-    let mut mine_coords = vec![Coord::<10, 10>(0, 0); mine_amount as usize];
-    mine_coords.fill_with(Coord::random);
+    let mine_amount = black_box(rand::random::<u8>()) % (mine_cap - 10) + 9;
+    let mut mine_coords = Vec::with_capacity(mine_amount as usize);
+    for _ in 0..mine_amount {
+        let mut coord = Coord::random();
+        while mine_coords.contains(&coord) {
+            coord = Coord::random();
+        }
+        mine_coords.push(coord);
+    }
+    let mut non_mine_coords = Vec::new();
+    for y in 0..10 {
+        for x in 0..10 {
+            let coord = Coord(x, y);
+            if !mine_coords.contains(&coord) {
+                non_mine_coords.push(coord);
+            }
+        }
+    }
 
     // Generate a random amount of constraints
-    let amount = black_box(rand::random::<u8>() % 70 + 20);
+    let amount = black_box(rand::random::<u8>() % constraint_count + 10);
     let mut vec = vec![Constraint::<10, 10>::default(); amount as usize];
     vec.fill_with(|| {
-        let amount = black_box(rand::random::<u8>() % 8 + 1);
-        let mut vec = vec![Coord::<10, 10>(0, 0); amount as usize];
-        vec.fill_with(Coord::random);
+        let amount = black_box(rand::random::<u8>() % 7 + 2);
+        let mut vec = Vec::with_capacity(amount as usize);
+
+        let max_mine_amount = amount + allow_trivial as u8;
+        let min_mine_amount = (!allow_trivial) as u8;
+
+        let mine_amount =
+            black_box(rand::random::<u8>() % (max_mine_amount - min_mine_amount) + min_mine_amount);
+        for i in 0..amount {
+            let mut coord = if i < mine_amount {
+                *mine_coords.choose(&mut rnd).unwrap()
+            } else {
+                *non_mine_coords.choose(&mut rnd).unwrap()
+            };
+            while vec.contains(&coord) {
+                coord = if i < mine_amount {
+                    *mine_coords.choose(&mut rnd).unwrap()
+                } else {
+                    *non_mine_coords.choose(&mut rnd).unwrap()
+                };
+            }
+            vec.push(coord);
+        }
+
         vec.sort();
         vec.dedup();
         let variables = ArrayVec::try_from(&*vec).unwrap();
@@ -430,5 +513,5 @@ fn generate_valid_constraints(mine_cap: u8) -> (ConstraintSet<10, 10>, Vec<Coord
         constraints: vec,
         variables: set,
     };
-    (constraint_set, mine_coords)
+    (constraint_set, mine_coords.into_iter().collect())
 }

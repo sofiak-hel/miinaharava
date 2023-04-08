@@ -14,6 +14,11 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
     }
 
     /// TODO: Docs
+    pub fn remove(&mut self, coord: Coord<W, H>) {
+        self.matrix.set(coord, false);
+    }
+
+    /// TODO: Docs
     pub fn contains(&self, coord: Coord<W, H>) -> bool {
         self.matrix.get(coord)
     }

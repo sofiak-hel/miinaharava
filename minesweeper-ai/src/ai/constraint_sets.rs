@@ -143,40 +143,6 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         }
     }
 
-    /// TODO: Docs
-    #[must_use]
-    pub fn clear_known_variables(
-        &mut self,
-        known_field: &KnownMinefield<W, H>,
-    ) -> Vec<Decision<W, H>> {
-        let mut decisions = Vec::new();
-        for (exists, coord) in self.variables.iter_mut() {
-            if let CellContent::Known(val) = known_field.get(coord) {
-                let mut idx = 0;
-                while let Some(constraint) = self.constraints.get_mut(idx) {
-                    while let Some(idx) = constraint.variables.iter().position(|v| *v == coord) {
-                        constraint.variables.remove(idx);
-                        constraint.label -= val as u8;
-                    }
-                    if constraint.is_empty() {
-                        self.constraints.remove(idx);
-                    } else {
-                        idx += 1;
-                    }
-                }
-
-                *exists = false;
-                if val {
-                    decisions.push(Decision::Flag(coord));
-                } else {
-                    decisions.push(Decision::Reveal(coord));
-                }
-            }
-        }
-
-        decisions
-    }
-
     /// Solves trivial cases, meaning that it will reveal all variables that
     /// have an obvious answer.
     #[must_use]
@@ -198,10 +164,17 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                 }
             }
 
-            old_decisions_len > decisions.len()
+            old_decisions_len < decisions.len()
         } {
             old_decisions_len = decisions.len();
         }
+
+        for decision in &decisions {
+            match decision {
+                Decision::Reveal(c) | Decision::Flag(c) => self.variables.remove(*c),
+            }
+        }
+
         decisions
     }
 
@@ -246,14 +219,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         while edited {
             edited = false;
             // TODOS:
-            // 1. self.constraints could be a HashSet with a priority queue?
-            // 2. tests are broken because constraints aren't checked for
-            //    duplicates again
             // 3. make tests for CoordSet
-            // 4. implement Ord/partialOrd for constraint, which #1 orders by
-            //    length, and when len are the same, order by the default method
-            //    (?) for dedup
-            // 5. Might be possible to combine trivial-solving and clearing known variables
             self.constraints.sort_by_key(|i| i.len());
 
             for smallest_idx in 0..self.constraints.len() {

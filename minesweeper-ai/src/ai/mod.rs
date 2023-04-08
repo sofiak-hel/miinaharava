@@ -20,7 +20,7 @@ pub enum CellContent {
     Unknown,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Represents a single decision
 pub enum Decision<const W: usize, const H: usize> {
     /// Flag this coordinate as a mine
