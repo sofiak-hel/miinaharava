@@ -185,14 +185,22 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         known_field: &mut KnownMinefield<W, H>,
     ) -> Vec<Decision<W, H>> {
         let mut decisions = Vec::new();
-        let mut idx = 0;
-        while let Some(constraint) = self.constraints.get_mut(idx) {
-            if let Some(d) = ConstraintSet::solve_trivial_constraint(constraint, known_field) {
-                decisions.extend(d);
-                self.constraints.remove(idx);
-            } else {
-                idx += 1;
+        let mut old_decisions_len = 0;
+
+        while {
+            let mut idx = 0;
+            while let Some(constraint) = self.constraints.get_mut(idx) {
+                if let Some(d) = ConstraintSet::solve_trivial_constraint(constraint, known_field) {
+                    decisions.extend(d);
+                    self.constraints.remove(idx);
+                } else {
+                    idx += 1;
+                }
             }
+
+            old_decisions_len > decisions.len()
+        } {
+            old_decisions_len = decisions.len();
         }
         decisions
     }
