@@ -1,4 +1,9 @@
 //! TODO: Docs
+use std::collections::{BinaryHeap, HashMap};
+
+use arrayvec::ArrayVec;
+use miinaharava::minefield::{Coord, Matrix};
+
 use super::{constraints::Constraint, coord_set::CoordSet, CellContent, Decision, KnownMinefield};
 
 #[derive(Debug, Clone, Default)]
@@ -82,6 +87,11 @@ impl<const W: usize, const H: usize> PartialEq for ConstraintSet<W, H> {
 }
 
 impl<const W: usize, const H: usize> ConstraintSet<W, H> {
+    const ARRAY_VEC_CONST: ArrayVec<usize, 8> = ArrayVec::new_const();
+    const ARRAY_VEC_CONST_W: [ArrayVec<usize, 8>; W] = [ConstraintSet::<W, H>::ARRAY_VEC_CONST; W];
+    const ARRAY_VEC_MATRIX: [[ArrayVec<usize, 8>; W]; H] =
+        [ConstraintSet::<W, H>::ARRAY_VEC_CONST_W; H];
+
     /// TODO: Docs
     pub fn drain_from(&mut self, other: &mut ConstraintSet<W, H>) -> &mut ConstraintSet<W, H> {
         self.constraints.append(&mut other.constraints);
@@ -246,4 +256,127 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         self.constraints.sort();
         self.constraints.dedup();
     }
+
+    /// TODO: Docs
+    #[allow(clippy::result_unit_err)]
+    pub fn find_all_viable_solutions(
+        &self,
+        remaining_mines: u8,
+        known_field: &KnownMinefield<W, H>,
+    ) -> Result<PossibleSolution<W, H>, ()> {
+        let mut map = Matrix(ConstraintSet::<W, H>::ARRAY_VEC_MATRIX);
+
+        for (i, constraint) in self.constraints.iter().enumerate() {
+            for var in &constraint.variables {
+                map.get_mut_ref(*var).push(i);
+            }
+        }
+
+        dbg!(&map);
+
+        let mut ordered = Vec::with_capacity(W * H);
+
+        for (y, row) in map.iter().enumerate() {
+            for (x, vec) in row.iter().enumerate() {
+                if !vec.is_empty() {
+                    ordered.push((Coord::<W, H>(x as u8, y as u8), vec));
+                }
+            }
+        }
+
+        ordered.sort_by_key(|c| -(c.1.len() as i8));
+
+        dbg!(&ordered);
+
+        let mut results = self.test_both(&ordered, 0, *known_field)?;
+        results.sort();
+        results.dedup();
+
+        let mut returned = Vec::new();
+        for result in results {
+            // let mine_count = result.iter().filter(|c| c.1).count();
+            returned.push(result);
+        }
+
+        Ok(returned)
+    }
+
+    // TODO: Docs
+    #[inline]
+    fn test_both(
+        &self,
+        list: &[(Coord<W, H>, &ArrayVec<usize, 8>)],
+        idx: usize,
+        testing_field: KnownMinefield<W, H>,
+    ) -> Result<PossibleSolution<W, H>, ()> {
+        let res2 = self.test(false, list, idx, testing_field);
+        let res1 = self.test(true, list, idx, testing_field);
+        if let (Err(_), Err(_)) = (&res1, &res2) {
+            Err(())?;
+        }
+
+        let mut results = Vec::new();
+        if let Ok(res) = res1 {
+            results.extend(res);
+        }
+        if let Ok(res) = res2 {
+            results.extend(res);
+        }
+        Ok(results)
+    }
+
+    /// TODO: Docs
+    fn test(
+        &self,
+        guess: bool,
+        list: &[(Coord<W, H>, &ArrayVec<usize, 8>)],
+        idx: usize,
+        mut testing_field: KnownMinefield<W, H>,
+    ) -> Result<PossibleSolution<W, H>, ()> {
+        if let Some((coord, idx_vec)) = list.get(idx) {
+            dbg!("guessing", guess, &coord);
+            testing_field.set(*coord, CellContent::Known(guess));
+            for idx in *idx_vec {
+                let constraint = unsafe { self.constraints.get_unchecked(*idx) };
+                let (hidden, mines) = guessed_count(constraint, &testing_field);
+
+                dbg!(constraint.label, hidden, mines);
+                if constraint.label > (hidden + mines) || mines > constraint.label {
+                    // Oh no
+                    dbg!("failure at", guess, &coord, constraint, hidden, mines);
+                    Err(())?;
+                }
+            }
+            let mut results = self.test_both(list, idx + 1, testing_field)?;
+            for res in &mut results {
+                res.push((*coord, guess));
+            }
+            dbg!("success:", &results);
+            Ok(results)
+        } else {
+            let mut outer_vec = Vec::with_capacity(idx.pow(2) + 1);
+            let res = Vec::with_capacity(list.len());
+            outer_vec.push(res);
+            dbg!("Ending found");
+            Ok(outer_vec)
+        }
+    }
+}
+
+type PossibleSolution<const W: usize, const H: usize> = Vec<Vec<(Coord<W, H>, bool)>>;
+
+/// TODO: Docs
+fn guessed_count<const W: usize, const H: usize>(
+    constraint: &Constraint<W, H>,
+    guessed: &KnownMinefield<W, H>,
+) -> (u8, u8) {
+    let mut hidden = constraint.variables.len();
+    let mut mines = 0;
+    for var in &constraint.variables {
+        if let CellContent::Known(val) = guessed.get(*var) {
+            hidden -= 1;
+            mines += val as i8;
+        }
+    }
+    (hidden as u8, mines as u8)
 }

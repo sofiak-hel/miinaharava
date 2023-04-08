@@ -89,7 +89,7 @@ pub enum GameState {
 
 /// Generic struct for a 2D matrix of type T
 #[derive(Debug, PartialEq, Clone, Eq, Copy)]
-pub struct Matrix<T: Copy, const W: usize, const H: usize>(pub [[T; W]; H]);
+pub struct Matrix<T, const W: usize, const H: usize>(pub [[T; W]; H]);
 
 impl<T: Copy + Default, const W: usize, const H: usize> Default for Matrix<T, W, H> {
     fn default() -> Self {
@@ -102,6 +102,21 @@ impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
     #[inline]
     pub fn get(&self, coord: Coord<W, H>) -> T {
         self.0[coord.1 as usize][coord.0 as usize]
+    }
+}
+
+impl<T, const W: usize, const H: usize> Matrix<T, W, H> {
+    /// Get a reference to the item in the position of the Coord
+    #[inline]
+    pub fn get_ref(&self, coord: Coord<W, H>) -> &T {
+        &self.0[coord.1 as usize][coord.0 as usize]
+    }
+
+    /// Get a mutable reference in a cell at the position of the coord in the
+    /// Matrix
+    #[inline]
+    pub fn get_mut_ref(&mut self, coord: Coord<W, H>) -> &mut T {
+        &mut self.0[coord.1 as usize][coord.0 as usize]
     }
 
     /// Set element in position of Coord from the matrix

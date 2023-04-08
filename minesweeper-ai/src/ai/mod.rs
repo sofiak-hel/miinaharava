@@ -43,6 +43,8 @@ pub struct CSPState<const W: usize, const H: usize> {
     /// Represents the current state of the minefield, according to the AI. Not
     /// guarenteed to be correct.
     pub known_fields: KnownMinefield<W, H>,
+    /// Represents the amount of mines that have been found so far
+    found_mines: u8,
 }
 
 impl<const W: usize, const H: usize> CSPState<W, H> {
@@ -53,8 +55,19 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
         minefield: &Minefield<W, H>,
     ) -> Vec<Decision<W, H>> {
         if reveals.is_empty() {
-            // Guess here maybe someday
-            vec![guess(minefield)]
+            if self.constraint_sets.0.is_empty() {
+                vec![guess(minefield)]
+            } else {
+                for set in &self.constraint_sets.0 {
+                    dbg!(set
+                        .find_all_viable_solutions(
+                            minefield.mines - self.found_mines,
+                            &self.known_fields,
+                        )
+                        .ok());
+                }
+                Vec::new()
+            }
         } else {
             self.handle_reveals(reveals, minefield)
         }
@@ -127,15 +140,17 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
         decisions.sort();
         decisions.dedup();
 
+        decisions.retain(|decision| match decision {
+            Decision::Flag(c) => minefield.field.get(*c) == Cell::Hidden,
+            Decision::Reveal(c) => !matches!(minefield.field.get(*c), Cell::Empty | Cell::Label(_)),
+        });
+
+        self.found_mines += decisions
+            .iter()
+            .filter(|d| matches!(d, Decision::Flag(_)))
+            .count() as u8;
+
         decisions
-            .into_iter()
-            .filter(|decision| match decision {
-                Decision::Flag(c) => minefield.field.get(*c) == Cell::Hidden,
-                Decision::Reveal(c) => {
-                    !matches!(minefield.field.get(*c), Cell::Empty | Cell::Label(_))
-                }
-            })
-            .collect()
     }
 }
 

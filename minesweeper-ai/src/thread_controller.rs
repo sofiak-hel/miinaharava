@@ -165,17 +165,17 @@ impl StateWrapper {
     /// having to match generics.
     #[cfg(debug_assertions)]
     pub fn print(&self) {
-        match self {
-            StateWrapper::Easy(s) => {
-                dbg!(&s.csp_state);
-            }
-            StateWrapper::Intermediate(s) => {
-                dbg!(&s.csp_state);
-            }
-            StateWrapper::Expert(s) => {
-                dbg!(&s.csp_state);
-            }
-        };
+        // match self {
+        //     StateWrapper::Easy(s) => {
+        //         dbg!(&s.csp_state);
+        //     }
+        //     StateWrapper::Intermediate(s) => {
+        //         dbg!(&s.csp_state);
+        //     }
+        //     StateWrapper::Expert(s) => {
+        //         dbg!(&s.csp_state);
+        //     }
+        // };
     }
 }
 
