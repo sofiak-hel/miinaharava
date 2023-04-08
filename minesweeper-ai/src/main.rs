@@ -13,11 +13,7 @@ use std::time::{Duration, Instant};
 use thread_controller::{Difficulty, StateStats, StateWrapper, ThreadController};
 
 mod ai;
-mod csp;
 mod thread_controller;
-
-#[cfg(test)]
-mod tests;
 
 /// Represents the current visual state, contains controller for the thread
 /// where AI is run, the actual visual game and a delay which controls the speed

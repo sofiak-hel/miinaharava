@@ -13,7 +13,7 @@ use std::{
 
 use miinaharava::minefield::{GameState, Minefield, Reveal};
 
-use crate::{ai::Decision, csp::ConstraintSatisficationState};
+use crate::{ai::ConstraintSatisficationState, ai::Decision};
 
 /// Macro that is useful for measuring how long a certain expression took.
 macro_rules! measure {

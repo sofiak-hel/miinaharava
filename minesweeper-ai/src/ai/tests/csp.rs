@@ -1,14 +1,11 @@
-use std::{
-    collections::{BinaryHeap, HashSet},
-    hint::black_box,
-};
+use std::hint::black_box;
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
 
-use crate::{
-    ai::Decision,
-    csp::{CellContent, Constraint, ConstraintSatisficationState, ConstraintSet, CoordSet},
+use crate::ai::{
+    constraint_sets::ConstraintSet, constraints::Constraint, coord_set::CoordSet, CellContent,
+    ConstraintSatisficationState, Decision,
 };
 
 const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
