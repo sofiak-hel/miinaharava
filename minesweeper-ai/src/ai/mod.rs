@@ -33,13 +33,13 @@ pub type KnownMinefield<const W: usize, const H: usize> = Matrix<CellContent, W,
 
 /// General state used for solving Constraint Satisfication Problem
 #[derive(Debug, Clone, Default)]
-pub struct ConstraintSatisficationState<const W: usize, const H: usize> {
+pub struct CSPState<const W: usize, const H: usize> {
     /// List of label-mine-location-constraints for a given state
     pub constraint_sets: CoupledSets<W, H>,
     pub known_fields: KnownMinefield<W, H>,
 }
 
-impl<const W: usize, const H: usize> ConstraintSatisficationState<W, H> {
+impl<const W: usize, const H: usize> CSPState<W, H> {
     /// TODO: Docs
     pub fn ponder(
         &mut self,

@@ -1,10 +1,10 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use miinaharava::minefield::{Coord, GameState, Minefield};
-use minesweeper_ai::ai::{ConstraintSatisficationState, Decision::*};
+use minesweeper_ai::ai::{CSPState, Decision::*};
 
 pub fn benchmark_specific_difficulty<const W: usize, const H: usize>(mines: u8) {
     let mut minefield = Minefield::<W, H>::generate(mines).unwrap();
-    let mut csp_state = ConstraintSatisficationState::default();
+    let mut csp_state = CSPState::default();
     let mut reveals = Vec::new();
     while minefield.game_state() == GameState::Pending {
         let decisions = csp_state.ponder(reveals.drain(..).collect(), &minefield);

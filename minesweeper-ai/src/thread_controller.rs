@@ -13,7 +13,7 @@ use std::{
 
 use miinaharava::minefield::{GameState, Minefield, Reveal};
 
-use crate::{ai::ConstraintSatisficationState, ai::Decision};
+use crate::{ai::CSPState, ai::Decision};
 
 /// Macro that is useful for measuring how long a certain expression took.
 macro_rules! measure {
@@ -200,7 +200,7 @@ pub struct State<const W: usize, const H: usize> {
     /// The current stack of decisions from the last ponder.
     decisions: Vec<Decision<W, H>>,
     reveals: Vec<Reveal<W, H>>,
-    csp_state: ConstraintSatisficationState<W, H>,
+    csp_state: CSPState<W, H>,
 }
 
 /// The common statistics from a State, that are not bound by generics.
@@ -230,7 +230,7 @@ impl<const W: usize, const H: usize> State<W, H> {
             },
             decisions: Vec::new(),
             reveals: Vec::new(),
-            csp_state: ConstraintSatisficationState::default(),
+            csp_state: CSPState::default(),
         }
     }
 
@@ -249,7 +249,7 @@ impl<const W: usize, const H: usize> State<W, H> {
             self.stats.generation_time += time;
             self.decisions.clear();
             self.reveals.clear();
-            self.csp_state = ConstraintSatisficationState::default();
+            self.csp_state = CSPState::default();
         } else if self.decisions.is_empty() {
             let (decisions, time) = measure!(self
                 .csp_state
