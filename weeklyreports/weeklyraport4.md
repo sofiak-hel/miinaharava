@@ -15,4 +15,7 @@
 
 ### Sat 08.04.2023
 
-#### 14:50
+#### 14:50 - 01:00
+- Optimized a lot, wrote a bunch of tests, fixed a few bugs
+- Started to write the actual algorithm part that demands finding all viable
+  solutions :( my gametime is dying someone please help me balance my syscalls

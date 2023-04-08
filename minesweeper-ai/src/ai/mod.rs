@@ -62,8 +62,8 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
                 let solutions = self
                     .constraint_sets
                     .find_viable_solutions(remaining_mines, &self.known_fields);
-                dbg!(&solutions);
-                Vec::new()
+                // dbg!(&solutions);
+                vec![guess(minefield)]
             }
         } else {
             self.handle_reveals(reveals, minefield)

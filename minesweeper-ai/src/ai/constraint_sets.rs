@@ -328,8 +328,6 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         };
         for result in results {
             let mine_count = result.iter().filter(|c| c.1).count() as u8;
-            dbg!(&result);
-            dbg!(mine_count);
             if mine_count <= remaining_mines {
                 unsafe {
                     returned
