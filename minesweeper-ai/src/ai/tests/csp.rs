@@ -322,7 +322,8 @@ fn test_trivial_on_nontrivial() {
 
 #[test]
 fn test_trivial_solver_with_known_variables() {
-    for _ in 0..10 {
+    for _ in 0..1000 {
+        // Generate non-trivial valid constraints
         let (mut set, mine_coords) = generate_valid_constraints(30, 50, false);
         dbg!(&set);
 
@@ -339,7 +340,7 @@ fn test_trivial_solver_with_known_variables() {
             }
         }
 
-        // 2. Make sure the returned decisions are as expected
+        // Generate an expected set of decisions to test later
         let mut expected = Vec::new();
         {
             let mut set_clone = set.clone();
@@ -387,32 +388,12 @@ fn test_trivial_solver_with_known_variables() {
             }
         }
 
-        expected.sort();
-        expected.dedup();
-
+        // Actually solve the trivial cases
         let mut decisions = set.solve_trivial_cases(&mut known);
         decisions.sort();
         decisions.dedup();
 
-        assert_eq!(decisions, expected);
-
-        // // 3. Make sure all expected fields are actually removed
-        dbg!(&set);
-        for decision in &expected {
-            match decision {
-                Decision::Reveal(c) | Decision::Flag(c) => {
-                    let true_variables: Vec<Coord<10, 10>> = set
-                        .constraints
-                        .iter()
-                        .flat_map(|c| c.variables.clone())
-                        .collect();
-                    assert!(!set.variables.contains(*c));
-                    assert!(!true_variables.contains(c));
-                }
-            }
-        }
-
-        // // 4. Also make sure all constraints are still valid
+        // 2. Also make sure all constraints are still valid
         for constraint in &set.constraints {
             let true_value = constraint
                 .variables
@@ -422,7 +403,35 @@ fn test_trivial_solver_with_known_variables() {
             assert_eq!(true_value as u8, constraint.label);
         }
 
-        // 5. Make sure clearing known variables is idempotent
+        // 3. Make sure no constraints are still trivial
+        for constraint in &set.constraints {
+            assert_ne!(constraint.label, constraint.len() as u8);
+            assert_ne!(constraint.len(), 0);
+        }
+
+        // 4. Make sure all decided fields are actually removed from variables,
+        //    and that they are now known
+        for decision in &decisions {
+            match decision {
+                Decision::Reveal(c) | Decision::Flag(c) => {
+                    let true_variables: Vec<Coord<10, 10>> = set
+                        .constraints
+                        .iter()
+                        .flat_map(|c| c.variables.clone())
+                        .collect();
+                    assert!(!set.variables.contains(*c));
+                    assert!(!true_variables.contains(c));
+                    assert_eq!(known.get(*c), CellContent::Known(mine_coords.contains(c)));
+                }
+            }
+        }
+
+        // 5. Make sure the returned decisions are exactly what was expected
+        expected.sort();
+        expected.dedup();
+        assert_eq!(decisions, expected);
+
+        // 6. Make sure clearing known variables is idempotent
         let old_set = set.clone();
         let _ = set.solve_trivial_cases(&mut known);
         assert_eq!(old_set, set);

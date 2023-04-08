@@ -163,7 +163,6 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                     idx += 1;
                 }
             }
-
             old_decisions_len < decisions.len()
         } {
             old_decisions_len = decisions.len();
