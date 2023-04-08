@@ -111,7 +111,9 @@ impl<const W: usize, const H: usize> ConstraintSatisficationState<W, H> {
                 }
                 decisions.extend(res);
             }
-            self.constraint_sets.check_splits();
+            if decisions.len() != prev_decisions {
+                self.constraint_sets.check_splits();
+            }
             decisions.len() != prev_decisions
         } {
             prev_decisions = decisions.len()
