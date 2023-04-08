@@ -58,14 +58,11 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
             if self.constraint_sets.0.is_empty() {
                 vec![guess(minefield)]
             } else {
-                for set in &self.constraint_sets.0 {
-                    dbg!(set
-                        .find_all_viable_solutions(
-                            minefield.mines - self.found_mines,
-                            &self.known_fields,
-                        )
-                        .ok());
-                }
+                let remaining_mines = minefield.mines - self.found_mines;
+                let solutions = self
+                    .constraint_sets
+                    .find_viable_solutions(remaining_mines, &self.known_fields);
+                dbg!(&solutions);
                 Vec::new()
             }
         } else {

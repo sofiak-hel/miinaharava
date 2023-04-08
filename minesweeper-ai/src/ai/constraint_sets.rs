@@ -65,6 +65,37 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
         }
         self.0 = new_vec;
     }
+
+    /// TODO: Docs
+    pub fn find_viable_solutions(
+        &self,
+        remaining_mines: u8,
+        known_minefield: &KnownMinefield<W, H>,
+    ) -> Vec<SolutionListMap<W, H>> {
+        let mut solution_lists = Vec::with_capacity(self.0.len());
+        let mut min_mines = 0;
+
+        for set in &self.0 {
+            if let Ok(solution) = set.find_viable_solutions(remaining_mines, known_minefield) {
+                min_mines += solution.min_mines;
+                solution_lists.push(solution);
+            }
+        }
+
+        let allowed_max_mines = min_mines + (remaining_mines - min_mines);
+        for list in &mut solution_lists {
+            for mine_count in (allowed_max_mines + 1)..=remaining_mines {
+                if let Some(curr) = list.get_mut(mine_count) {
+                    if !curr.is_empty() {
+                        dbg!(&curr);
+                    }
+                    curr.clear()
+                }
+            }
+            list.max_mines = allowed_max_mines.min(list.max_mines);
+        }
+        solution_lists
+    }
 }
 
 /// Coupled Constraints
@@ -259,11 +290,11 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
     /// TODO: Docs
     #[allow(clippy::result_unit_err)]
-    pub fn find_all_viable_solutions(
+    pub fn find_viable_solutions(
         &self,
         remaining_mines: u8,
         known_field: &KnownMinefield<W, H>,
-    ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
+    ) -> Result<SolutionListMap<W, H>, ()> {
         let mut map = Matrix(ConstraintSet::<W, H>::ARRAY_VEC_MATRIX);
 
         for (i, constraint) in self.constraints.iter().enumerate() {
@@ -271,8 +302,6 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                 map.get_mut_ref(*var).push(i);
             }
         }
-
-        dbg!(&map);
 
         let mut ordered = Vec::with_capacity(W * H);
 
@@ -286,33 +315,44 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
         ordered.sort_by_key(|c| -(c.1.len() as i8));
 
-        dbg!(&ordered);
+        // dbg!(&ordered);
 
         let mut results = self.test_both(&ordered, 0, *known_field)?;
         results.sort();
         results.dedup();
 
-        let mut returned = vec![Vec::new(); (remaining_mines + 1) as usize];
+        let mut returned = SolutionListMap {
+            solutions_by_mines: vec![Vec::new(); (remaining_mines + 1) as usize],
+            min_mines: remaining_mines + 1,
+            max_mines: 0,
+        };
         for result in results {
             let mine_count = result.iter().filter(|c| c.1).count() as u8;
+            dbg!(&result);
+            dbg!(mine_count);
             if mine_count <= remaining_mines {
                 unsafe {
-                    returned.get_unchecked_mut(mine_count as usize).push(result);
+                    returned
+                        .solutions_by_mines
+                        .get_unchecked_mut(mine_count as usize)
+                        .push(result);
                 };
             }
+            returned.min_mines = returned.min_mines.min(mine_count);
+            returned.max_mines = returned.max_mines.max(mine_count);
         }
 
         Ok(returned)
     }
 
-    // TODO: Docs
+    /// TODO: Docs
     #[inline]
     fn test_both(
         &self,
         list: &[(Coord<W, H>, &ArrayVec<usize, 8>)],
         idx: usize,
         testing_field: KnownMinefield<W, H>,
-    ) -> Result<PossibleSolution<W, H>, ()> {
+    ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
         let res2 = self.test(false, list, idx, testing_field);
         let res1 = self.test(true, list, idx, testing_field);
         if let (Err(_), Err(_)) = (&res1, &res2) {
@@ -336,18 +376,18 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         list: &[(Coord<W, H>, &ArrayVec<usize, 8>)],
         idx: usize,
         mut testing_field: KnownMinefield<W, H>,
-    ) -> Result<PossibleSolution<W, H>, ()> {
+    ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
         if let Some((coord, idx_vec)) = list.get(idx) {
-            dbg!("guessing", guess, &coord);
+            // dbg!("guessing", guess, &coord);
             testing_field.set(*coord, CellContent::Known(guess));
             for idx in *idx_vec {
                 let constraint = unsafe { self.constraints.get_unchecked(*idx) };
                 let (hidden, mines) = guessed_count(constraint, &testing_field);
 
-                dbg!(constraint.label, hidden, mines);
+                // dbg!(constraint.label, hidden, mines);
                 if constraint.label > (hidden + mines) || mines > constraint.label {
                     // Oh no
-                    dbg!("failure at", guess, &coord, constraint, hidden, mines);
+                    // dbg!("failure at", guess, &coord, constraint, hidden, mines);
                     Err(())?;
                 }
             }
@@ -355,19 +395,52 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             for res in &mut results {
                 res.push((*coord, guess));
             }
-            dbg!("success:", &results);
+            // dbg!("success:", &results);
             Ok(results)
         } else {
             let mut outer_vec = Vec::with_capacity(idx.pow(2) + 1);
             let res = Vec::with_capacity(list.len());
             outer_vec.push(res);
-            dbg!("Ending found");
+            // dbg!("Ending found");
             Ok(outer_vec)
         }
     }
 }
 
-type PossibleSolution<const W: usize, const H: usize> = Vec<Vec<(Coord<W, H>, bool)>>;
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+/// TODO: Docs
+pub struct SolutionListMap<const W: usize, const H: usize> {
+    solutions_by_mines: Vec<Vec<PossibleSolution<W, H>>>,
+    min_mines: u8,
+    max_mines: u8,
+}
+
+impl<const W: usize, const H: usize> SolutionListMap<W, H> {
+    /// TODO: Docs
+    pub fn get(&self, mine_count: u8) -> Option<&Vec<PossibleSolution<W, H>>> {
+        if self.min_mines > mine_count || mine_count > self.max_mines {
+            None
+        } else {
+            unsafe { Some(self.solutions_by_mines.get_unchecked(mine_count as usize)) }
+        }
+    }
+
+    /// TODO: Docs
+    pub fn get_mut(&mut self, mine_count: u8) -> Option<&mut Vec<PossibleSolution<W, H>>> {
+        if self.min_mines > mine_count || mine_count > self.max_mines {
+            None
+        } else {
+            unsafe {
+                Some(
+                    self.solutions_by_mines
+                        .get_unchecked_mut(mine_count as usize),
+                )
+            }
+        }
+    }
+}
+
+type PossibleSolution<const W: usize, const H: usize> = Vec<(Coord<W, H>, bool)>;
 
 /// TODO: Docs
 fn guessed_count<const W: usize, const H: usize>(
