@@ -263,7 +263,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         &self,
         remaining_mines: u8,
         known_field: &KnownMinefield<W, H>,
-    ) -> Result<PossibleSolution<W, H>, ()> {
+    ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
         let mut map = Matrix(ConstraintSet::<W, H>::ARRAY_VEC_MATRIX);
 
         for (i, constraint) in self.constraints.iter().enumerate() {
@@ -292,10 +292,14 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         results.sort();
         results.dedup();
 
-        let mut returned = Vec::new();
+        let mut returned = vec![Vec::new(); (remaining_mines + 1) as usize];
         for result in results {
-            // let mine_count = result.iter().filter(|c| c.1).count();
-            returned.push(result);
+            let mine_count = result.iter().filter(|c| c.1).count() as u8;
+            if mine_count <= remaining_mines {
+                unsafe {
+                    returned.get_unchecked_mut(mine_count as usize).push(result);
+                };
+            }
         }
 
         Ok(returned)
