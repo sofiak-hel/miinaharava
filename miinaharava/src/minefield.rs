@@ -143,7 +143,7 @@ impl<T, const W: usize, const H: usize> IntoIterator for Matrix<T, W, H> {
 /// Represents a mechanical abstract minefield in minesweeper
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Minefield<const W: usize, const H: usize> {
-    mine_indices: Matrix<bool, W, H>,
+    pub mine_indices: Matrix<bool, W, H>,
     /// The visible field
     pub field: Matrix<Cell, W, H>,
     /// How many mines are in the field.

@@ -45,7 +45,7 @@ impl<'a, const W: usize, const H: usize> SolutionList<'a, W, H> {
     }
 
     /// TODO: Docs
-    pub fn find_trivial_solutions(&self) -> Vec<Decision<W, H>> {
+    pub fn find_trivial_solutions(&self, known: &mut KnownMinefield<W, H>) -> Vec<Decision<W, H>> {
         let mut decisions = Vec::new();
 
         'outer: for (i, (coord, _)) in self.ordered.iter().enumerate() {
@@ -61,10 +61,11 @@ impl<'a, const W: usize, const H: usize> SolutionList<'a, W, H> {
                 }
             }
             if let Some(val) = result {
+                known.set(*coord, CellContent::Known(val));
                 decisions.push(if val {
-                    Decision::Reveal(*coord)
-                } else {
                     Decision::Flag(*coord)
+                } else {
+                    Decision::Reveal(*coord)
                 });
             }
         }

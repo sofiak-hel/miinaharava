@@ -68,4 +68,38 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
             *a |= *b;
         }
     }
+
+    /// TODO: Docs
+    pub fn have_coords_in_common(&self, other: &CoordSet<W, H>) -> bool {
+        for (a, b) in self
+            .matrix
+            .0
+            .iter()
+            .flatten()
+            .zip(other.matrix.0.iter().flatten())
+        {
+            if *a && *b {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// TODO: Docs
+    pub fn intersection(&self, other: &CoordSet<W, H>) -> CoordSet<W, H> {
+        let mut new_coordset = CoordSet::default();
+
+        for ((a, b), c) in new_coordset
+            .matrix
+            .0
+            .iter_mut()
+            .flatten()
+            .zip(self.matrix.0.iter().flatten())
+            .zip(other.matrix.0.iter().flatten())
+        {
+            *a = *b && *c;
+        }
+
+        new_coordset
+    }
 }

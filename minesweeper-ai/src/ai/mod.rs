@@ -70,15 +70,23 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
                     .find_viable_solutions(remaining_mines, &self.known_fields);
                 let mut trivials = Vec::new();
                 for list in solution_lists {
-                    let res = list.find_trivial_solutions();
+                    let res = list.find_trivial_solutions(&mut self.known_fields);
                     if !res.is_empty() {
-                        println!("Found {:?} trivials", res);
                         trivials.extend(res);
                     }
                 }
                 if trivials.is_empty() {
                     vec![guess(minefield)]
                 } else {
+                    for trivial in &trivials {
+                        match trivial {
+                            Decision::Reveal(c) => assert!(!minefield.mine_indices.get(*c)),
+                            Decision::Flag(c) => assert!(minefield.mine_indices.get(*c)),
+                        }
+                    }
+                    for set in &mut self.constraint_sets.0 {
+                        trivials.extend(set.solve_trivial_cases(&mut self.known_fields));
+                    }
                     trivials
                 }
             }
@@ -153,6 +161,8 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
 
         decisions.sort();
         decisions.dedup();
+
+        self.constraint_sets.check_splits();
 
         decisions.retain(|decision| match decision {
             Decision::Flag(c) => minefield.field.get(*c) == Cell::Hidden,

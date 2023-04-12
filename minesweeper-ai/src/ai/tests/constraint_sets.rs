@@ -406,3 +406,26 @@ fn test_trivial_solver_with_known_variables() {
         assert_eq!(old_set, set);
     }
 }
+
+#[test]
+fn test_check_splits() {
+    for _ in 0..1000 {
+        // Generate non-trivial valid constraints
+        let (set, _) = generate_valid_constraints(20, 20, false);
+        dbg!(&set);
+
+        let sets = set.check_splits();
+
+        for (i, set1) in sets.iter().enumerate() {
+            for (j, set2) in sets.iter().enumerate() {
+                if i != j {
+                    let intersection = set1.variables.intersection(&set2.variables);
+                    dbg!(&set1.variables.iter().collect::<Vec<_>>());
+                    dbg!(&set2.variables.iter().collect::<Vec<_>>());
+                    dbg!(&intersection.iter().collect::<Vec<_>>());
+                    assert_eq!(intersection.iter().count(), 0)
+                }
+            }
+        }
+    }
+}

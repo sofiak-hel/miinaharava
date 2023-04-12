@@ -57,7 +57,9 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
     pub fn check_splits(&mut self) {
         let mut new_vec = Vec::new();
         while let Some(set) = self.0.pop() {
-            new_vec.extend(set.check_splits());
+            if !set.constraints.is_empty() {
+                new_vec.extend(set.check_splits());
+            }
         }
         self.0 = new_vec;
     }
@@ -122,25 +124,40 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
         let mut sets: Vec<ConstraintSet<W, H>> = Vec::new();
 
-        'outer: while let Some(constraint) = constraints.pop() {
-            for set in &mut sets {
-                if constraint
-                    .variables
-                    .iter()
-                    .any(|v| set.variables.contains(*v))
-                {
-                    set.variables
-                        .insert_many(constraint.variables.iter().copied());
-                    set.constraints.push(constraint);
-                    continue 'outer;
+        while let Some(constraint) = constraints.pop() {
+            let (mut indexes, found_sets): (Vec<usize>, Vec<&mut ConstraintSet<W, H>>) = sets
+                .iter_mut()
+                .enumerate()
+                .filter(|(_, constraint_set)| {
+                    constraint
+                        .variables
+                        .iter()
+                        .any(|v| constraint_set.variables.contains(*v))
+                })
+                .unzip();
+
+            // Combine all retrieved constraints into the first constraint
+            let constraint_set = found_sets.into_iter().reduce(|a, b| a.drain_from(b));
+
+            if let Some(set) = constraint_set {
+                set.variables
+                    .insert_many(constraint.variables.iter().copied());
+                set.constraints.push(constraint);
+
+                if !indexes.is_empty() {
+                    indexes.remove(0);
+                    for index in indexes.iter().rev() {
+                        sets.remove(*index);
+                    }
                 }
+            } else {
+                let mut variables = CoordSet::default();
+                variables.insert_many(constraint.variables.iter().copied());
+                sets.push(ConstraintSet {
+                    variables,
+                    constraints: vec![constraint],
+                });
             }
-            let mut variables = CoordSet::default();
-            variables.insert_many(constraint.variables.iter().copied());
-            sets.push(ConstraintSet {
-                constraints: vec![constraint],
-                variables,
-            })
         }
 
         sets
