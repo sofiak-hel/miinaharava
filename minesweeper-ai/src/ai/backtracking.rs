@@ -157,13 +157,6 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         let res2 = self.test(false, list, history.clone(), testing_field);
         let res1 = self.test(true, list, history, testing_field);
 
-        // TODOS:
-        // - Tests for test_both
-        // - Tests for find_viable_solutions
-        // - simplify this method?
-        // - Rest of the algorithm that uses these viable solutions, from step
-        //   5., check for crapshoots first though
-
         let mut results = Vec::with_capacity(2);
         if let Some(res) = res1 {
             results.extend(res);
