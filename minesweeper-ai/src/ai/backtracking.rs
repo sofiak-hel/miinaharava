@@ -53,10 +53,9 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
         let mut min_mines = 0;
 
         for set in &self.0 {
-            if let Ok(solution) = set.find_viable_solutions(remaining_mines, known_minefield) {
-                min_mines += solution.min_mines;
-                solution_lists.push(solution);
-            }
+            let solutions = set.find_viable_solutions(remaining_mines, known_minefield);
+            min_mines += solutions.min_mines;
+            solution_lists.push(solutions);
         }
 
         let allowed_max_mines = min_mines + (remaining_mines - min_mines);
@@ -84,6 +83,10 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     /// Form a list from all variables that contain the variable and indexes of
     /// all constraints that include said variable. Sort the list by the amount
     /// of constraints for each variable from most constraints to least.
+    ///
+    /// Constraint indexes refer to the current order of constraints, if
+    /// constraints are modified at any time, the indexes may not work correctly
+    /// anymore!
     pub fn find_ordered(&self) -> Vec<(Coord<W, H>, ArrayVec<usize, 8>)> {
         let mut map = Matrix(ConstraintSet::<W, H>::ARRAY_VEC_MATRIX);
 
@@ -109,15 +112,14 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     }
 
     /// TODO: Docs
-    #[allow(clippy::result_unit_err)]
     pub fn find_viable_solutions(
         &self,
         remaining_mines: u8,
         known_field: &KnownMinefield<W, H>,
-    ) -> Result<ViableSolutions<W, H>, ()> {
+    ) -> ViableSolutions<W, H> {
         let ordered = self.find_ordered();
 
-        let mut results = self.test_both(&ordered, Vec::new(), *known_field)?;
+        let mut results = self.test_both(&ordered, Vec::new(), *known_field);
         results.sort();
         results.dedup();
 
@@ -140,22 +142,19 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             returned.max_mines = returned.max_mines.max(mine_count);
         }
 
-        Ok(returned)
+        returned
     }
 
     /// TODO: Docs
     #[inline]
-    fn test_both(
+    pub fn test_both(
         &self,
         list: &[(Coord<W, H>, ArrayVec<usize, 8>)],
         history: Vec<bool>,
         testing_field: KnownMinefield<W, H>,
-    ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
+    ) -> Vec<PossibleSolution<W, H>> {
         let res2 = self.test(false, list, history.clone(), testing_field);
         let res1 = self.test(true, list, history, testing_field);
-        if let (Err(_), Err(_)) = (&res1, &res2) {
-            Err(())?;
-        }
 
         // TODOS:
         // - Tests for test_both
@@ -164,14 +163,14 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         // - Rest of the algorithm that uses these viable solutions, from step
         //   5., check for crapshoots first though
 
-        let mut results = Vec::new();
-        if let Ok(res) = res1 {
+        let mut results = Vec::with_capacity(2);
+        if let Some(res) = res1 {
             results.extend(res);
         }
-        if let Ok(res) = res2 {
+        if let Some(res) = res2 {
             results.extend(res);
         }
-        Ok(results)
+        results
     }
 
     /// TODO: Docs
@@ -181,7 +180,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         list: &[(Coord<W, H>, ArrayVec<usize, 8>)],
         mut history: Vec<bool>,
         mut testing_field: KnownMinefield<W, H>,
-    ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
+    ) -> Option<Vec<PossibleSolution<W, H>>> {
         if let Some((coord, idx_vec)) = list.get(history.len()) {
             testing_field.set(*coord, CellContent::Known(guess));
             for idx in idx_vec {
@@ -189,17 +188,21 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
                 let (hidden, mines) = guessed_count(constraint, &testing_field);
 
                 if constraint.label > (hidden + mines) || mines > constraint.label {
-                    Err(())?;
+                    None?;
                 }
             }
             history.push(guess);
             if history.len() >= list.len() {
-                Ok(vec![history])
+                let mut returned = Vec::with_capacity(list.len());
+                returned.push(history);
+                Some(returned)
             } else {
-                self.test_both(list, history, testing_field)
+                Some(self.test_both(list, history, testing_field))
             }
         } else {
-            Ok(vec![history])
+            let mut returned = Vec::with_capacity(list.len());
+            returned.push(history);
+            Some(returned)
         }
     }
 }
