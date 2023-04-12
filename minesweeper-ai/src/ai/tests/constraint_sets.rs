@@ -143,18 +143,21 @@ fn test_known_reduces() {
 #[test]
 fn test_random_reduces() {
     // Do all of this 100 times for good measure (random is hard)
-    for _ in 0..200 {
+    for _ in 0..1000 {
         // 1. First generate some random amount of valid constraints
         // (valid, as in the labels in the set always correspond correctly)
-        let (mut constraint_set, mine_coords) = generate_valid_constraints(50, 50, true);
+        let (mut constraint_set, mine_coords) = generate_valid_constraints(30, 30, true);
         dbg!(&constraint_set);
+        dbg!(&mine_coords);
 
         constraint_set.reduce();
+        dbg!(&constraint_set);
 
         // 3. Make sure no two constraints can be further reduced
         for (i, c1) in constraint_set.constraints.iter().enumerate() {
             for (j, c2) in constraint_set.constraints.iter().enumerate() {
                 if i != j {
+                    dbg!(&c1, &c2);
                     assert!(!c2.is_superset_of(c1) && !c1.is_superset_of(c2))
                 }
             }
@@ -278,7 +281,7 @@ fn test_trivial_solver_on_nontrivial() {
 fn test_trivial_solver_with_known_variables() {
     for _ in 0..1000 {
         // Generate non-trivial valid constraints
-        let (mut set, mine_coords) = generate_valid_constraints(30, 50, false);
+        let (mut set, mine_coords) = generate_valid_constraints(30, 30, false);
         dbg!(&set);
 
         let mut known = Matrix([[CellContent::Unknown; 10]; 10]);

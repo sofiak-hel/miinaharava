@@ -2,7 +2,7 @@ use std::hint::black_box;
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::{Coord, GameState, Matrix, Minefield};
-use rand::seq::SliceRandom;
+use rand::{seq::SliceRandom, Rng};
 
 use crate::ai::{
     constraint_sets::ConstraintSet, constraints::Constraint, coord_set::CoordSet, guess, CSPState,
@@ -147,89 +147,89 @@ fn generate_valid_constraints(
     constraint_count: u8,
     allow_trivial: bool,
 ) -> (ConstraintSet<10, 10>, Vec<Coord<10, 10>>) {
-    let mut rnd = rand::thread_rng();
+    let mut rng = rand::thread_rng();
 
     // Generate a random set of mines, keep track of mine-coords and
     // non-mine-coords separately
     let mine_amount = black_box(rand::random::<u8>()) % (mine_cap - 10) + 9;
-    let mut mine_coords = Vec::with_capacity(mine_amount as usize);
-    for _ in 0..mine_amount {
-        let mut coord = Coord::random();
-        while mine_coords.contains(&coord) {
-            coord = Coord::random();
-        }
-        mine_coords.push(coord);
-    }
-    let mut non_mine_coords = Vec::new();
-    for y in 0..10 {
-        for x in 0..10 {
-            let coord = Coord(x, y);
-            if !mine_coords.contains(&coord) {
-                non_mine_coords.push(coord);
+    let mine_coords = {
+        let mut mine_coords = Vec::with_capacity(mine_amount as usize);
+        for _ in 0..mine_amount {
+            let mut coord = Coord::random();
+            while mine_coords.contains(&coord) {
+                coord = Coord::random();
             }
+            mine_coords.push(coord);
         }
-    }
+        mine_coords
+    };
 
     // Generate a random amount of constraints
-    let amount = black_box(rand::random::<u8>() % constraint_count + 10);
-    let mut vec = vec![Constraint::<10, 10>::default(); amount as usize];
-    let mut var_constraint_count = Matrix([[0u8; 10]; 10]);
-    vec.fill_with(|| {
-        // Pick a random amount of variables for constraint
-        let amount = black_box(rand::random::<u8>() % 4 + 2);
+    let constraint_amount = black_box(rand::random::<u8>() % constraint_count + 10) as usize;
 
-        // Calculate the maximum and minimum amount of allowed mines
-        let max_mine_amount = amount + allow_trivial as u8;
-        let min_mine_amount = (!allow_trivial) as u8;
+    let mut constraints = Vec::with_capacity(constraint_amount);
+    let mut available_coords = Vec::new();
+    for y in 0..10 {
+        for x in 0..10 {
+            available_coords.push(Coord::<10, 10>(x as u8, y as u8));
+        }
+    }
+    while constraints.len() < constraint_amount {
+        let constraint_coord = *available_coords.choose(&mut rng).unwrap();
+        available_coords.retain(|c| *c != constraint_coord);
 
-        // Get the actual amount of mines in this constraint
-        let mine_amount =
-            black_box(rand::random::<u8>() % (max_mine_amount - min_mine_amount) + min_mine_amount);
+        let neighbors = constraint_coord.neighbours();
+        let mut mine_neighbors: Vec<_> = neighbors
+            .iter()
+            .filter(|n| mine_coords.contains(n))
+            .collect();
+        let mut non_mine_neighbors: Vec<_> = neighbors
+            .iter()
+            .filter(|n| !mine_coords.contains(n))
+            .collect();
 
-        // Generate <amount> variables while keeping the amount of constraints
-        // for one variable in realistic terms and making sure the amount of
-        // mines ends up being correct.
-        let mut vec: Vec<Coord<10, 10>> = Vec::with_capacity(amount as usize);
-        for i in 0..amount {
-            let coord = if i < mine_amount {
-                let valid_mine_coords: Vec<&Coord<10, 10>> =
-                    mine_coords.iter().filter(|c| !vec.contains(c)).collect();
-                **valid_mine_coords.choose(&mut rnd).unwrap()
+        if !allow_trivial && (mine_neighbors.is_empty() || non_mine_neighbors.is_empty()) {
+            continue;
+        }
+
+        let max_mines = mine_neighbors.len() as u8;
+        let min_mines = (non_mine_neighbors.is_empty() || !allow_trivial) as u8;
+
+        let mine_count = rng.gen_range(min_mines..=max_mines);
+
+        let max_vars = non_mine_neighbors.len() as u8 + mine_count;
+        let min_vars = 1 + (!allow_trivial as u8) * (mine_count);
+        assert!(max_vars >= min_vars);
+
+        let variable_count = rng.gen_range(min_vars..=max_vars);
+
+        let mut variables = Vec::with_capacity(variable_count as usize);
+        for i in 0..variable_count {
+            let var = if i < mine_count {
+                mine_neighbors.remove(rand::random::<usize>() % mine_neighbors.len())
             } else {
-                let valid_non_mine_coords: Vec<&Coord<10, 10>> = non_mine_coords
-                    .iter()
-                    .filter(|c| !vec.contains(c))
-                    .collect();
-                **valid_non_mine_coords.choose(&mut rnd).unwrap()
+                non_mine_neighbors.remove(rand::random::<usize>() % non_mine_neighbors.len())
             };
-
-            // Make sure no variable is in too many constraints
-            let count = var_constraint_count.get_mut_ref(coord);
-            *count += 1;
-            if *count > 7 {
-                mine_coords.retain(|c| *c != coord);
-                non_mine_coords.retain(|c| *c != coord);
-            }
-            vec.push(coord);
+            variables.push(*var);
         }
 
-        // Form the constraint
-        let variables = ArrayVec::try_from(&*vec).unwrap();
-        Constraint {
-            // Make sure label is always correct
-            label: variables
-                .iter()
-                .filter(|v| mine_coords.contains(*v))
-                .count() as u8,
-            variables,
-        }
-    });
+        let variables = ArrayVec::try_from(
+            &*neighbors
+                .choose_multiple(&mut rng, variable_count as usize)
+                .cloned()
+                .collect::<Vec<Coord<10, 10>>>(),
+        )
+        .unwrap();
+        let label = variables.iter().filter(|v| mine_coords.contains(v)).count() as u8;
+
+        constraints.push(Constraint { label, variables });
+    }
 
     // Form the set from the constraints
     let mut set = CoordSet::default();
-    set.insert_many(vec.iter().flat_map(|c| c.variables.clone()));
+    set.insert_many(constraints.iter().flat_map(|c| c.variables.clone()));
     let constraint_set = ConstraintSet {
-        constraints: vec,
+        constraints,
         variables: set,
     };
     (constraint_set, mine_coords.into_iter().collect())

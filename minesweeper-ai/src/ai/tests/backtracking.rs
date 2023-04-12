@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use bitvec::vec::BitVec;
 use miinaharava::minefield::Matrix;
 
@@ -7,11 +9,15 @@ use super::generate_valid_constraints;
 
 #[test]
 fn test_both_finds_at_least_correct_solution() {
-    for _ in 0..100 {
+    for _ in 0..200 {
         // Generate non-trivial valid constraints
-        let (set, mine_coords) = generate_valid_constraints(30, 30, false);
+        let (set, mine_coords) = generate_valid_constraints(20, 20, false);
         let known = Matrix([[CellContent::Unknown; 10]; 10]);
-        let ordered = set.find_ordered();
+        let ordered = set
+            .find_ordered()
+            .into_iter()
+            .filter(|(_, v)| v.len() > 1)
+            .collect::<Vec<_>>();
 
         let mut correct_solution: BitVec = BitVec::new();
         for (coord, _) in &ordered {
