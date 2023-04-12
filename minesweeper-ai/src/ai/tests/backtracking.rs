@@ -1,3 +1,4 @@
+use bitvec::vec::BitVec;
 use miinaharava::minefield::Matrix;
 
 use crate::ai::CellContent;
@@ -14,11 +15,9 @@ fn test_both_finds_at_least_correct_solution() {
 
         let mut correct_solution = Vec::with_capacity(ordered.len());
         for (coord, _) in &ordered {
-            if mine_coords.contains(coord) {
-                correct_solution.push(coord);
-            }
+            correct_solution.push(mine_coords.contains(coord));
         }
 
-        let possible_solutions = set.test_both(&ordered, Vec::new(), known);
+        let possible_solutions = set.test_both(&ordered, BitVec::new(), known);
     }
 }

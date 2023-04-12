@@ -1,4 +1,5 @@
 use arrayvec::ArrayVec;
+use bitvec::vec::BitVec;
 use miinaharava::minefield::{Coord, Matrix};
 
 use super::{
@@ -7,19 +8,19 @@ use super::{
     CellContent, KnownMinefield,
 };
 
-type PossibleSolution<const W: usize, const H: usize> = Vec<bool>;
+type PossibleSolution = BitVec;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 /// TODO: Docs
-pub struct ViableSolutions<const W: usize, const H: usize> {
-    solutions_by_mines: Vec<Vec<PossibleSolution<W, H>>>,
+pub struct SolutionListMap {
+    solutions_by_mines: Vec<Vec<PossibleSolution>>,
     min_mines: u8,
     max_mines: u8,
 }
 
-impl<const W: usize, const H: usize> ViableSolutions<W, H> {
+impl SolutionListMap {
     /// TODO: Docs
-    pub fn get(&self, mine_count: u8) -> Option<&Vec<PossibleSolution<W, H>>> {
+    pub fn get(&self, mine_count: u8) -> Option<&Vec<PossibleSolution>> {
         if self.min_mines > mine_count || mine_count > self.max_mines {
             None
         } else {
@@ -28,7 +29,7 @@ impl<const W: usize, const H: usize> ViableSolutions<W, H> {
     }
 
     /// TODO: Docs
-    pub fn get_mut(&mut self, mine_count: u8) -> Option<&mut Vec<PossibleSolution<W, H>>> {
+    pub fn get_mut(&mut self, mine_count: u8) -> Option<&mut Vec<PossibleSolution>> {
         if self.min_mines > mine_count || mine_count > self.max_mines {
             None
         } else {
@@ -48,7 +49,7 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
         &self,
         remaining_mines: u8,
         known_minefield: &KnownMinefield<W, H>,
-    ) -> Vec<ViableSolutions<W, H>> {
+    ) -> Vec<SolutionListMap> {
         let mut solution_lists = Vec::with_capacity(self.0.len());
         let mut min_mines = 0;
 
@@ -116,14 +117,15 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         &self,
         remaining_mines: u8,
         known_field: &KnownMinefield<W, H>,
-    ) -> ViableSolutions<W, H> {
+    ) -> SolutionListMap {
         let ordered = self.find_ordered();
 
-        let mut results = self.test_both(&ordered, Vec::new(), *known_field);
+        let mut results =
+            self.test_both(&ordered, BitVec::with_capacity(ordered.len()), *known_field);
         results.sort();
         results.dedup();
 
-        let mut returned = ViableSolutions {
+        let mut returned = SolutionListMap {
             solutions_by_mines: vec![Vec::new(); (remaining_mines + 1) as usize],
             min_mines: remaining_mines + 1,
             max_mines: 0,
@@ -150,9 +152,9 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     pub fn test_both(
         &self,
         list: &[(Coord<W, H>, ArrayVec<usize, 8>)],
-        history: Vec<bool>,
+        history: PossibleSolution,
         testing_field: KnownMinefield<W, H>,
-    ) -> Vec<PossibleSolution<W, H>> {
+    ) -> Vec<PossibleSolution> {
         let res2 = self.test(false, list, history.clone(), testing_field);
         let res1 = self.test(true, list, history, testing_field);
 
@@ -178,9 +180,9 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         &self,
         guess: bool,
         list: &[(Coord<W, H>, ArrayVec<usize, 8>)],
-        mut history: Vec<bool>,
+        mut history: PossibleSolution,
         mut testing_field: KnownMinefield<W, H>,
-    ) -> Option<Vec<PossibleSolution<W, H>>> {
+    ) -> Option<Vec<PossibleSolution>> {
         if let Some((coord, idx_vec)) = list.get(history.len()) {
             testing_field.set(*coord, CellContent::Known(guess));
             for idx in idx_vec {
