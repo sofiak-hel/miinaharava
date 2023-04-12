@@ -132,7 +132,7 @@ impl<T, const W: usize, const H: usize> Matrix<T, W, H> {
     }
 }
 
-impl<T: Copy, const W: usize, const H: usize> IntoIterator for Matrix<T, W, H> {
+impl<T, const W: usize, const H: usize> IntoIterator for Matrix<T, W, H> {
     type Item = [T; W];
     type IntoIter = std::array::IntoIter<Self::Item, H>;
     fn into_iter(self) -> Self::IntoIter {

@@ -11,13 +11,13 @@ type PossibleSolution<const W: usize, const H: usize> = Vec<bool>;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 /// TODO: Docs
-pub struct SolutionListMap<const W: usize, const H: usize> {
+pub struct ViableSolutions<const W: usize, const H: usize> {
     solutions_by_mines: Vec<Vec<PossibleSolution<W, H>>>,
     min_mines: u8,
     max_mines: u8,
 }
 
-impl<const W: usize, const H: usize> SolutionListMap<W, H> {
+impl<const W: usize, const H: usize> ViableSolutions<W, H> {
     /// TODO: Docs
     pub fn get(&self, mine_count: u8) -> Option<&Vec<PossibleSolution<W, H>>> {
         if self.min_mines > mine_count || mine_count > self.max_mines {
@@ -48,7 +48,7 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
         &self,
         remaining_mines: u8,
         known_minefield: &KnownMinefield<W, H>,
-    ) -> Vec<SolutionListMap<W, H>> {
+    ) -> Vec<ViableSolutions<W, H>> {
         let mut solution_lists = Vec::with_capacity(self.0.len());
         let mut min_mines = 0;
 
@@ -81,13 +81,10 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     const ARRAY_VEC_MATRIX: [[ArrayVec<usize, 8>; W]; H] =
         [ConstraintSet::<W, H>::ARRAY_VEC_CONST_W; H];
 
-    /// TODO: Docs
-    #[allow(clippy::result_unit_err)]
-    pub fn find_viable_solutions(
-        &self,
-        remaining_mines: u8,
-        known_field: &KnownMinefield<W, H>,
-    ) -> Result<SolutionListMap<W, H>, ()> {
+    /// Form a list from all variables that contain the variable and indexes of
+    /// all constraints that include said variable. Sort the list by the amount
+    /// of constraints for each variable from most constraints to least.
+    pub fn find_ordered(&self) -> Vec<(Coord<W, H>, ArrayVec<usize, 8>)> {
         let mut map = Matrix(ConstraintSet::<W, H>::ARRAY_VEC_MATRIX);
 
         for (i, constraint) in self.constraints.iter().enumerate() {
@@ -98,8 +95,8 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
         let mut ordered = Vec::with_capacity(W * H);
 
-        for (y, row) in map.iter().enumerate() {
-            for (x, vec) in row.iter().enumerate() {
+        for (y, row) in map.into_iter().enumerate() {
+            for (x, vec) in row.into_iter().enumerate() {
                 if !vec.is_empty() {
                     ordered.push((Coord::<W, H>(x as u8, y as u8), vec));
                 }
@@ -108,13 +105,23 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
         ordered.sort_by_key(|c| -(c.1.len() as i8));
 
-        // dbg!(&ordered);
+        ordered
+    }
+
+    /// TODO: Docs
+    #[allow(clippy::result_unit_err)]
+    pub fn find_viable_solutions(
+        &self,
+        remaining_mines: u8,
+        known_field: &KnownMinefield<W, H>,
+    ) -> Result<ViableSolutions<W, H>, ()> {
+        let ordered = self.find_ordered();
 
         let mut results = self.test_both(&ordered, Vec::new(), *known_field)?;
         results.sort();
         results.dedup();
 
-        let mut returned = SolutionListMap {
+        let mut returned = ViableSolutions {
             solutions_by_mines: vec![Vec::new(); (remaining_mines + 1) as usize],
             min_mines: remaining_mines + 1,
             max_mines: 0,
@@ -140,7 +147,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     #[inline]
     fn test_both(
         &self,
-        list: &[(Coord<W, H>, &ArrayVec<usize, 8>)],
+        list: &[(Coord<W, H>, ArrayVec<usize, 8>)],
         history: Vec<bool>,
         testing_field: KnownMinefield<W, H>,
     ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
@@ -150,6 +157,13 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             Err(())?;
         }
 
+        // TODOS:
+        // - Tests for test_both
+        // - Tests for find_viable_solutions
+        // - simplify this method?
+        // - Rest of the algorithm that uses these viable solutions, from step
+        //   5., check for crapshoots first though
+
         let mut results = Vec::new();
         if let Ok(res) = res1 {
             results.extend(res);
@@ -157,7 +171,6 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         if let Ok(res) = res2 {
             results.extend(res);
         }
-        results.dedup();
         Ok(results)
     }
 
@@ -165,26 +178,26 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     fn test(
         &self,
         guess: bool,
-        list: &[(Coord<W, H>, &ArrayVec<usize, 8>)],
+        list: &[(Coord<W, H>, ArrayVec<usize, 8>)],
         mut history: Vec<bool>,
         mut testing_field: KnownMinefield<W, H>,
     ) -> Result<Vec<PossibleSolution<W, H>>, ()> {
         if let Some((coord, idx_vec)) = list.get(history.len()) {
-            // dbg!("guessing", guess, &coord);
             testing_field.set(*coord, CellContent::Known(guess));
-            for idx in *idx_vec {
+            for idx in idx_vec {
                 let constraint = unsafe { self.constraints.get_unchecked(*idx) };
                 let (hidden, mines) = guessed_count(constraint, &testing_field);
 
-                // dbg!(constraint.label, hidden, mines);
                 if constraint.label > (hidden + mines) || mines > constraint.label {
-                    // Oh no
-                    // dbg!("failure at", guess, &coord, constraint, hidden, mines);
                     Err(())?;
                 }
             }
             history.push(guess);
-            self.test_both(list, history, testing_field)
+            if history.len() >= list.len() {
+                Ok(vec![history])
+            } else {
+                self.test_both(list, history, testing_field)
+            }
         } else {
             Ok(vec![history])
         }
