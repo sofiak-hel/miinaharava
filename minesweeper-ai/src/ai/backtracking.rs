@@ -13,11 +13,7 @@ type PossibleSolution = BitVec;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 /// TODO: Docs
 pub struct SolutionListMap {
-    #[cfg(test)]
     pub solutions_by_mines: Vec<Vec<PossibleSolution>>,
-
-    #[cfg(not(test))]
-    solutions_by_mines: Vec<Vec<PossibleSolution>>,
     min_mines: u8,
     max_mines: u8,
 }

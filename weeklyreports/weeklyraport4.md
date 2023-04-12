@@ -22,4 +22,7 @@
 
 ### Wed 12.04.2023
 
-#### 15:50
+#### 15:50 - 21:10
+- Made tests for backtracking
+- Smashed a few annoying bugs
+- Optimized!
