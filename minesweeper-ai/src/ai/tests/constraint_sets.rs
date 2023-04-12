@@ -180,7 +180,7 @@ fn test_random_reduces() {
 
 #[test]
 fn test_trivial_solver_on_trivial() {
-    for _ in 0..50 {
+    for _ in 0..1000 {
         for multiplier in 0..=1 {
             let mut known = Matrix([[CellContent::Unknown; 10]; 10]);
             // 1. Generate some random variables
@@ -233,6 +233,9 @@ fn test_trivial_solver_on_trivial() {
             // 5. Make sure all constraints were processed and removed, they
             //    were trivial.
             assert_eq!(constraint_set.constraints.len(), 0);
+
+            // 5. Make sure all variables were removed as well
+            assert_eq!(constraint_set.variables.iter().count(), 0);
         }
     }
 }
@@ -279,7 +282,7 @@ fn test_trivial_solver_on_nontrivial() {
 
 #[test]
 fn test_trivial_solver_with_known_variables() {
-    for _ in 0..1000 {
+    for _ in 0..5000 {
         // Generate non-trivial valid constraints
         let (mut set, mine_coords) = generate_valid_constraints(20, 20, false);
         dbg!(&set);
@@ -366,7 +369,16 @@ fn test_trivial_solver_with_known_variables() {
             assert_ne!(constraint.len(), 0);
         }
 
-        // 4. Make sure all decided fields are actually removed from variables,
+        // 4. Make sure no variables exist that have no constraints
+        let constraint_vars: Vec<_> = set.constraints.iter().flat_map(|c| &c.variables).collect();
+        dbg!(&set.constraints);
+        dbg!(&constraint_vars);
+        for var in set.variables.iter() {
+            dbg!(&var);
+            assert!(constraint_vars.contains(&&var));
+        }
+
+        // 5. Make sure all decided fields are actually removed from variables,
         //    and that they are now known
         for decision in &decisions {
             match decision {
@@ -383,12 +395,12 @@ fn test_trivial_solver_with_known_variables() {
             }
         }
 
-        // 5. Make sure the returned decisions are exactly what was expected
+        // 6. Make sure the returned decisions are exactly what was expected
         expected.sort();
         expected.dedup();
         assert_eq!(decisions, expected);
 
-        // 6. Make sure clearing known variables is idempotent
+        // 7. Make sure clearing known variables is idempotent
         let old_set = set.clone();
         let _ = set.solve_trivial_cases(&mut known);
         assert_eq!(old_set, set);

@@ -171,6 +171,12 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             old_decisions_len = decisions.len();
         }
 
+        for (exists, var) in self.variables.iter_mut() {
+            if let CellContent::Known(_) = known_field.get(var) {
+                *exists = false;
+            }
+        }
+
         for decision in &decisions {
             match decision {
                 Decision::Reveal(c) | Decision::Flag(c) => self.variables.remove(*c),

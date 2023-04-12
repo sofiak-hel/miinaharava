@@ -44,8 +44,6 @@ pub struct CSPState<const W: usize, const H: usize> {
     /// Represents the current state of the minefield, according to the AI. Not
     /// guarenteed to be correct.
     pub known_fields: KnownMinefield<W, H>,
-    /// Represents the amount of mines that have been found so far
-    found_mines: u8,
 }
 
 impl<const W: usize, const H: usize> CSPState<W, H> {
@@ -59,12 +57,30 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
             if self.constraint_sets.0.is_empty() {
                 vec![guess(minefield)]
             } else {
-                let remaining_mines = minefield.mines - self.found_mines;
-                let solutions = self
+                let found_mines = self
+                    .known_fields
+                    .iter()
+                    .flatten()
+                    .filter(|c| **c == CellContent::Known(true))
+                    .count() as u8;
+
+                let remaining_mines = minefield.mines - found_mines;
+                let solution_lists = self
                     .constraint_sets
                     .find_viable_solutions(remaining_mines, &self.known_fields);
-                // dbg!(&solutions);
-                vec![guess(minefield)]
+                let mut trivials = Vec::new();
+                for list in solution_lists {
+                    let res = list.find_trivial_solutions();
+                    if !res.is_empty() {
+                        println!("Found {:?} trivials", res);
+                        trivials.extend(res);
+                    }
+                }
+                if trivials.is_empty() {
+                    vec![guess(minefield)]
+                } else {
+                    trivials
+                }
             }
         } else {
             self.handle_reveals(reveals, minefield)
@@ -142,11 +158,6 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
             Decision::Flag(c) => minefield.field.get(*c) == Cell::Hidden,
             Decision::Reveal(c) => !matches!(minefield.field.get(*c), Cell::Empty | Cell::Label(_)),
         });
-
-        self.found_mines += decisions
-            .iter()
-            .filter(|d| matches!(d, Decision::Flag(_)))
-            .count() as u8;
 
         decisions
     }
