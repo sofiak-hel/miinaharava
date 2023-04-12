@@ -173,9 +173,10 @@ fn generate_valid_constraints(
     // Generate a random amount of constraints
     let amount = black_box(rand::random::<u8>() % constraint_count + 10);
     let mut vec = vec![Constraint::<10, 10>::default(); amount as usize];
+    let mut var_constraint_count = Matrix([[0u8; 10]; 10]);
     vec.fill_with(|| {
         // Pick a random amount of variables for constraint
-        let amount = black_box(rand::random::<u8>() % 7 + 2);
+        let amount = black_box(rand::random::<u8>() % 4 + 2);
 
         // Calculate the maximum and minimum amount of allowed mines
         let max_mine_amount = amount + allow_trivial as u8;
@@ -188,25 +189,24 @@ fn generate_valid_constraints(
         // Generate <amount> variables while keeping the amount of constraints
         // for one variable in realistic terms and making sure the amount of
         // mines ends up being correct.
-        let mut var_constraint_count = Matrix([[0u8; 10]; 10]);
-        let mut vec = Vec::with_capacity(amount as usize);
+        let mut vec: Vec<Coord<10, 10>> = Vec::with_capacity(amount as usize);
         for i in 0..amount {
-            let mut coord = if i < mine_amount {
-                *mine_coords.choose(&mut rnd).unwrap()
+            let coord = if i < mine_amount {
+                let valid_mine_coords: Vec<&Coord<10, 10>> =
+                    mine_coords.iter().filter(|c| !vec.contains(c)).collect();
+                **valid_mine_coords.choose(&mut rnd).unwrap()
             } else {
-                *non_mine_coords.choose(&mut rnd).unwrap()
+                let valid_non_mine_coords: Vec<&Coord<10, 10>> = non_mine_coords
+                    .iter()
+                    .filter(|c| !vec.contains(c))
+                    .collect();
+                **valid_non_mine_coords.choose(&mut rnd).unwrap()
             };
-            while vec.contains(&coord) {
-                coord = if i < mine_amount {
-                    *mine_coords.choose(&mut rnd).unwrap()
-                } else {
-                    *non_mine_coords.choose(&mut rnd).unwrap()
-                };
-            }
 
             // Make sure no variable is in too many constraints
-            *var_constraint_count.get_mut_ref(coord) += 1;
-            if var_constraint_count.get(coord) > 7 {
+            let count = var_constraint_count.get_mut_ref(coord);
+            *count += 1;
+            if *count > 7 {
                 mine_coords.retain(|c| *c != coord);
                 non_mine_coords.retain(|c| *c != coord);
             }

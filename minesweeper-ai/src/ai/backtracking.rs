@@ -120,8 +120,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     ) -> SolutionListMap {
         let ordered = self.find_ordered();
 
-        let mut results =
-            self.test_both(&ordered, BitVec::with_capacity(ordered.len()), *known_field);
+        let mut results = self.test_both(&ordered, BitVec::new(), *known_field);
         results.sort();
         results.dedup();
 
