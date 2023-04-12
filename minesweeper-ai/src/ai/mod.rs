@@ -76,6 +76,17 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
                     }
                 }
                 if trivials.is_empty() {
+                    // TODO:
+                    // 1. simple test for SolutionList::find_trivial_solutions
+                    // 2. do propability stuff here
+                    //   1. Calculate propabilities for all vars (propability of
+                    // being 0)
+                    //   2. Find amount of non-constrained vars (ncv) (just
+                    // combine all set.variables and then invert) (this will
+                    // actually contain known fields, filter them out)
+                    //   3. remaining_mines / amount of ncv's = P2 !
+                    //   4. Profit! (guess)
+                    // 4. detect crap-shoot here? L8R
                     vec![guess(minefield)]
                 } else {
                     for trivial in &trivials {

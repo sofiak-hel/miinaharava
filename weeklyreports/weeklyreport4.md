@@ -27,4 +27,6 @@
 - Smashed a few annoying bugs
 - Optimized!
 
-#### 22:20 - 00:00
+#### 22:20 - 00:30
+- Add find_trivial_solutions for the solution lists
+- Add a bunch of tests, fix a bunch of bugs..
