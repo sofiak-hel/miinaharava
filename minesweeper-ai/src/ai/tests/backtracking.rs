@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use bitvec::vec::BitVec;
 use miinaharava::minefield::Matrix;
 
