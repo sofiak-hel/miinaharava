@@ -27,7 +27,7 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
 
     /// TODO: Docs
     #[allow(dead_code)]
-    pub fn iter(&mut self) -> impl Iterator<Item = Coord<W, H>> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = Coord<W, H>> + '_ {
         self.matrix
             .0
             .iter()

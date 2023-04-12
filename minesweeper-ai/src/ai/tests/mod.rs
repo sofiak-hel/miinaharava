@@ -195,20 +195,22 @@ fn generate_valid_constraints(
         let max_mines = mine_neighbors.len() as u8;
         let min_mines = (non_mine_neighbors.is_empty() || !allow_trivial) as u8;
 
-        let mine_count = rng.gen_range(min_mines..=max_mines);
+        let mine_count = black_box(rng.gen_range(min_mines..=max_mines));
 
         let max_vars = non_mine_neighbors.len() as u8 + mine_count;
         let min_vars = 1 + (!allow_trivial as u8) * (mine_count);
         assert!(max_vars >= min_vars);
 
-        let variable_count = rng.gen_range(min_vars..=max_vars);
+        let variable_count = black_box(rng.gen_range(min_vars..=max_vars));
 
         let mut variables = Vec::with_capacity(variable_count as usize);
         for i in 0..variable_count {
             let var = if i < mine_count {
-                mine_neighbors.remove(rand::random::<usize>() % mine_neighbors.len())
+                mine_neighbors.remove(black_box(rand::random::<usize>() % mine_neighbors.len()))
             } else {
-                non_mine_neighbors.remove(rand::random::<usize>() % non_mine_neighbors.len())
+                non_mine_neighbors.remove(black_box(
+                    rand::random::<usize>() % non_mine_neighbors.len(),
+                ))
             };
             variables.push(*var);
         }

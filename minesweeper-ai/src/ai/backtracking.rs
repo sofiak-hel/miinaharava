@@ -13,6 +13,10 @@ type PossibleSolution = BitVec;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 /// TODO: Docs
 pub struct SolutionListMap {
+    #[cfg(test)]
+    pub solutions_by_mines: Vec<Vec<PossibleSolution>>,
+
+    #[cfg(not(test))]
     solutions_by_mines: Vec<Vec<PossibleSolution>>,
     min_mines: u8,
     max_mines: u8,
@@ -24,7 +28,7 @@ impl SolutionListMap {
         if self.min_mines > mine_count || mine_count > self.max_mines {
             None
         } else {
-            unsafe { Some(self.solutions_by_mines.get_unchecked(mine_count as usize)) }
+            Some(&self.solutions_by_mines[mine_count as usize])
         }
     }
 
@@ -33,13 +37,13 @@ impl SolutionListMap {
         if self.min_mines > mine_count || mine_count > self.max_mines {
             None
         } else {
-            unsafe {
-                Some(
-                    self.solutions_by_mines
-                        .get_unchecked_mut(mine_count as usize),
-                )
-            }
+            Some(&mut self.solutions_by_mines[mine_count as usize])
         }
+    }
+
+    /// TODO: Docs
+    pub fn iter(&mut self) -> impl Iterator<Item = &Vec<PossibleSolution>> {
+        (self.min_mines..=self.max_mines).map(|i| &self.solutions_by_mines[i as usize])
     }
 }
 
@@ -63,9 +67,6 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
         for list in &mut solution_lists {
             for mine_count in (allowed_max_mines + 1)..=remaining_mines {
                 if let Some(curr) = list.get_mut(mine_count) {
-                    if !curr.is_empty() {
-                        dbg!(&curr);
-                    }
                     curr.clear()
                 }
             }
@@ -120,7 +121,11 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     ) -> SolutionListMap {
         let ordered = self.find_ordered();
 
-        let mut results = self.test_both(&ordered, BitVec::new(), *known_field);
+        let mut results = if !ordered.is_empty() {
+            self.test_both(&ordered, BitVec::new(), *known_field)
+        } else {
+            Vec::new()
+        };
         results.sort();
         results.dedup();
 
@@ -132,15 +137,10 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         for result in results {
             let mine_count = result.iter().filter(|c| **c).count() as u8;
             if mine_count <= remaining_mines {
-                unsafe {
-                    returned
-                        .solutions_by_mines
-                        .get_unchecked_mut(mine_count as usize)
-                        .push(result);
-                };
+                returned.solutions_by_mines[mine_count as usize].push(result);
+                returned.min_mines = returned.min_mines.min(mine_count);
+                returned.max_mines = returned.max_mines.max(mine_count);
             }
-            returned.min_mines = returned.min_mines.min(mine_count);
-            returned.max_mines = returned.max_mines.max(mine_count);
         }
 
         returned
@@ -175,28 +175,23 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         mut history: PossibleSolution,
         mut testing_field: KnownMinefield<W, H>,
     ) -> Option<Vec<PossibleSolution>> {
-        if let Some((coord, idx_vec)) = list.get(history.len()) {
-            testing_field.set(*coord, CellContent::Known(guess));
-            for idx in idx_vec {
-                let constraint = unsafe { self.constraints.get_unchecked(*idx) };
-                let (hidden, mines) = guessed_count(constraint, &testing_field);
+        let (coord, idx_vec) = &list[history.len()];
+        testing_field.set(*coord, CellContent::Known(guess));
+        for idx in idx_vec {
+            let constraint = unsafe { self.constraints.get_unchecked(*idx) };
+            let (hidden, mines) = guessed_count(constraint, &testing_field);
 
-                if constraint.label > (hidden + mines) || mines > constraint.label {
-                    None?;
-                }
+            if constraint.label > (hidden + mines) || mines > constraint.label {
+                None?;
             }
-            history.push(guess);
-            if history.len() >= list.len() {
-                let mut returned = Vec::with_capacity(list.len());
-                returned.push(history);
-                Some(returned)
-            } else {
-                Some(self.test_both(list, history, testing_field))
-            }
-        } else {
+        }
+        history.push(guess);
+        if history.len() >= list.len() {
             let mut returned = Vec::with_capacity(list.len());
             returned.push(history);
             Some(returned)
+        } else {
+            Some(self.test_both(list, history, testing_field))
         }
     }
 }
