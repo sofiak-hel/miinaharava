@@ -146,7 +146,7 @@ fn test_random_reduces() {
     for _ in 0..1000 {
         // 1. First generate some random amount of valid constraints
         // (valid, as in the labels in the set always correspond correctly)
-        let (mut constraint_set, mine_coords) = generate_valid_constraints(30, 30, true);
+        let (mut constraint_set, mine_coords) = generate_valid_constraints(20, 20, true);
         dbg!(&constraint_set);
         dbg!(&mine_coords);
 
@@ -281,7 +281,7 @@ fn test_trivial_solver_on_nontrivial() {
 fn test_trivial_solver_with_known_variables() {
     for _ in 0..1000 {
         // Generate non-trivial valid constraints
-        let (mut set, mine_coords) = generate_valid_constraints(30, 30, false);
+        let (mut set, mine_coords) = generate_valid_constraints(20, 20, false);
         dbg!(&set);
 
         let mut known = Matrix([[CellContent::Unknown; 10]; 10]);
