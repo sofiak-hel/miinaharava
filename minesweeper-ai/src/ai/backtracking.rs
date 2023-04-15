@@ -24,7 +24,7 @@ pub struct SolutionList<const W: usize, const H: usize> {
     /// The largest amount of mines
     max_mines: u8,
     /// The coordinates that the solutions indexes reflect.
-    ordered: Vec<Coord<W, H>>,
+    coords: Vec<Coord<W, H>>,
 }
 
 impl<const W: usize, const H: usize> SolutionList<W, H> {
@@ -40,7 +40,7 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
             solutions_by_mines: vec![Vec::new(); (remaining_mines + 1) as usize],
             min_mines: remaining_mines + 1,
             max_mines: 0,
-            ordered: coords,
+            coords,
         };
         for solution in solutions {
             let mine_count = solution.iter().filter(|c| **c).count() as u8;
@@ -85,28 +85,65 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
     pub fn find_trivial_decisions(&self, known: &mut KnownMinefield<W, H>) -> Vec<Decision<W, H>> {
         let mut decisions = Vec::new();
 
-        for (i, coord) in self.ordered.iter().enumerate() {
-            let same_idx_solutions = self.iter().flatten().map(|s| s[i]).collect::<BitVec>();
-
-            let result = if same_idx_solutions.all() {
+        for (coord, guesses) in self.transposed_solution_coords() {
+            if let Some(value) = if guesses.all() {
                 Some(true)
-            } else if same_idx_solutions.not_any() {
+            } else if guesses.not_any() {
                 Some(false)
             } else {
                 None
-            };
-
-            if let Some(value) = result {
-                known.set(*coord, CellContent::Known(value));
+            } {
+                known.set(coord, CellContent::Known(value));
                 decisions.push(if value {
-                    Decision::Flag(*coord)
+                    Decision::Flag(coord)
                 } else {
-                    Decision::Reveal(*coord)
+                    Decision::Reveal(coord)
                 });
             }
         }
 
         decisions
+    }
+
+    /// Return an iterator that returns all the solutions but transposed.
+    ///
+    /// Imagine that we have N amount of M-long solutions, where M is also the
+    /// amount of coords.
+    ///
+    /// This function then returns an iterator that goes through M amount of
+    /// iterations and returns a Coord and N-long [BitVec], that represent the
+    /// guess in every solution for this specific coord.
+    pub fn transposed_solution_coords(
+        &'_ self,
+    ) -> impl Iterator<Item = (Coord<W, H>, PossibleSolution)> + '_ {
+        self.coords.iter().enumerate().map(|(i, coord)| {
+            let same_idx_solutions = self.iter().flatten().map(|s| s[i]).collect::<BitVec>();
+            (*coord, same_idx_solutions)
+        })
+    }
+
+    /// Find the best guess decision for this set of solutions. Returns
+    /// coordinate and the likelyhood (0 - 1) that this coordinate is empty.   
+    ///
+    /// The best guess is when you divide the amount of falses in every solution
+    /// for a given Coord and divide that by the amount of solutions. The Coord
+    /// that has the greatest propability is the most likely then to be empty of
+    /// a mine, and therefore the best guess.
+    pub fn find_best_guess(&self) -> (Coord<W, H>, f32) {
+        let mut best_guess = None;
+
+        for (coord, guesses) in self.transposed_solution_coords() {
+            let propability = guesses.count_zeros() as f32 / guesses.len() as f32;
+            if let Some((coord, best_guess_p)) = best_guess {
+                if best_guess_p <= propability {
+                    best_guess = Some((coord, propability));
+                }
+            } else {
+                best_guess = Some((coord, propability));
+            }
+        }
+
+        best_guess.unwrap()
     }
 }
 
