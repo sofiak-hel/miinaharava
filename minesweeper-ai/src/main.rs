@@ -151,7 +151,7 @@ fn main() {
             "  Successful: {} ({}%)",
             stats.successful_guesses, guess_perc
         );
-        println!("  Average guess: {}%", stats.average_guess);
+        println!("  Average guess: {}%", stats.average_guess * 100.);
 
         println!("Game difficulty: {:?}", difficulty);
 

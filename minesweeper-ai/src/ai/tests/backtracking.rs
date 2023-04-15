@@ -231,7 +231,7 @@ fn test_both_finds_only_valid_solutions_and_correct_solutions() {
             correct_solution.push(mine_coords.contains(coord));
         }
 
-        let possible_solutions = set.test_both(&ordered, BitVec::new(), known);
+        let possible_solutions = set.find_solutions(&ordered, BitVec::new(), known);
         dbg!(&possible_solutions);
 
         // 1. Make sure correct solution is found

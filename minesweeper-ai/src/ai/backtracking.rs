@@ -24,7 +24,7 @@ pub struct SolutionList<const W: usize, const H: usize> {
     /// The largest amount of mines
     pub max_mines: u8,
     /// The coordinates that the solutions indexes reflect.
-    coords: Vec<Coord<W, H>>,
+    pub coords: Vec<Coord<W, H>>,
 }
 
 impl<const W: usize, const H: usize> SolutionList<W, H> {
@@ -43,7 +43,7 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
             coords,
         };
         for solution in solutions {
-            let mine_count = solution.iter().filter(|c| **c).count() as u8;
+            let mine_count = solution.count_ones() as u8;
             if mine_count <= remaining_mines {
                 solution_list.solutions_by_mines[mine_count as usize].push(solution);
                 solution_list.min_mines = solution_list.min_mines.min(mine_count);
@@ -165,9 +165,9 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
             solution_lists.push(solutions);
         }
 
-        let allowed_max_mines = min_mines + (remaining_mines - min_mines);
         for list in &mut solution_lists {
-            for mine_count in (allowed_max_mines + 1)..=remaining_mines {
+            let allowed_max_mines = list.min_mines + (remaining_mines - min_mines);
+            for mine_count in (allowed_max_mines + 1)..=(list.solutions_by_mines.len() as u8) {
                 if let Some(curr) = list.get_mut(mine_count) {
                     curr.clear()
                 }
@@ -228,7 +228,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         let ordered = self.find_ordered();
 
         let mut solutions = if !ordered.is_empty() {
-            self.test_both(&ordered, BitVec::new(), *known_field)
+            self.find_solutions(&ordered, BitVec::new(), *known_field)
         } else {
             Vec::new()
         };
@@ -244,14 +244,14 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
     /// TODO: Docs
     #[inline]
-    pub fn test_both(
+    pub fn find_solutions(
         &self,
         list: &[(Coord<W, H>, ArrayVec<usize, 8>)],
         history: PossibleSolution,
         testing_field: KnownMinefield<W, H>,
     ) -> Vec<PossibleSolution> {
-        let res2 = self.test(false, list, history.clone(), testing_field);
-        let res1 = self.test(true, list, history, testing_field);
+        let res2 = self.guess_next(false, list, history.clone(), testing_field);
+        let res1 = self.guess_next(true, list, history, testing_field);
 
         let mut results = Vec::with_capacity(2);
         if let Some(res) = res1 {
@@ -264,7 +264,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     }
 
     /// TODO: Docs
-    fn test(
+    fn guess_next(
         &self,
         guess: bool,
         list: &[(Coord<W, H>, ArrayVec<usize, 8>)],
@@ -275,7 +275,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         let (coord, idx_vec) = &list[history.len()];
         testing_field.set(*coord, CellContent::Known(guess));
         for idx in idx_vec {
-            let constraint = unsafe { self.constraints.get_unchecked(*idx) };
+            let constraint = &self.constraints[*idx];
             let (hidden, mines) = guessed_count(constraint, &testing_field);
 
             if constraint.label > (hidden + mines) || mines > constraint.label {
@@ -288,7 +288,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             returned.push(history);
             Some(returned)
         } else {
-            Some(self.test_both(list, history, testing_field))
+            Some(self.find_solutions(list, history, testing_field))
         }
     }
 }

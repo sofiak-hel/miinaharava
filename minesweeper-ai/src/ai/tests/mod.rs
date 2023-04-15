@@ -92,11 +92,11 @@ fn test_csp_insert() {
 }
 
 #[test]
-fn test_csp_reveals() {
+fn test_csp_ponder_with_reveals() {
     let mut minefield = Minefield::<7, 7>::with_mines(TRIVIAL_MINES);
     let mut state = CSPState::default();
     let reveals = minefield.reveal(Coord(0, 0)).unwrap();
-    state.handle_reveals(reveals, &minefield);
+    state.ponder(reveals, &minefield);
 
     let mut expected = into_constraint_vec(&[
         (1, &[Coord(0, 3), Coord(1, 3)]),
