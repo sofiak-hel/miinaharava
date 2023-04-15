@@ -11,6 +11,7 @@ use crate::ai::{
 
 mod backtracking;
 mod constraint_sets;
+mod coord_set;
 
 pub const TRIVIAL_MINES: Matrix<bool, 7, 7> = Matrix([
     [false, false, false, false, false, false, false],
@@ -35,7 +36,9 @@ fn solve_trivial_field() {
         for decision in decisions {
             if let Some(res) = match decision {
                 Decision::Flag(coord) => minefield.flag(coord).ok(),
-                Decision::Reveal(coord) => minefield.reveal(coord).ok(),
+                Decision::Reveal(coord) | Decision::GuessReveal(coord, _) => {
+                    minefield.reveal(coord).ok()
+                }
             } {
                 reveals.extend(res);
             }
@@ -119,9 +122,8 @@ fn test_csp_reveals() {
 #[test]
 fn guess_is_a_corner() {
     for _ in 0..100 {
-        let minefield = Minefield::<10, 10>::generate(10).unwrap();
-        let decision = guess(&minefield);
-        assert!(matches!(decision, Decision::Reveal(Coord(0 | 9, 0 | 9))));
+        let decision = guess(CoordSet::<10, 10>::from(true));
+        assert!(matches!(decision, Coord(0 | 9, 0 | 9)));
     }
 }
 

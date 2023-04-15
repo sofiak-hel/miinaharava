@@ -1,5 +1,7 @@
 //! TODO: Docs
 
+use miinaharava::minefield::Coord;
+
 use super::{constraints::Constraint, coord_set::CoordSet, CellContent, Decision, KnownMinefield};
 
 #[derive(Debug, Clone, Default)]
@@ -64,8 +66,19 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
         self.0 = new_vec;
     }
 
-    pub fn get_unconstrained_variables(&self) -> CoordSet<W, H> {
-        let mut unconstrained = CoordSet::from(true);
+    /// TODO: Docs
+    pub fn unconstrained_variables(
+        &self,
+        known_minefield: &KnownMinefield<W, H>,
+    ) -> CoordSet<W, H> {
+        let mut unconstrained = CoordSet::from(false);
+        for (y, row) in known_minefield.iter().enumerate() {
+            for (x, item) in row.iter().enumerate() {
+                if let CellContent::Unknown = item {
+                    unconstrained.insert(Coord(x as u8, y as u8));
+                }
+            }
+        }
         for set in &self.0 {
             unconstrained.omit(&set.variables);
         }
@@ -205,7 +218,9 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
 
         for decision in &decisions {
             match decision {
-                Decision::Reveal(c) | Decision::Flag(c) => self.variables.remove(*c),
+                Decision::Reveal(c) | Decision::Flag(c) | Decision::GuessReveal(c, _) => {
+                    self.variables.remove(*c)
+                }
             }
         }
 

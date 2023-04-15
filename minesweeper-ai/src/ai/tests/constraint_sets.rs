@@ -382,7 +382,7 @@ fn test_trivial_solver_with_known_variables() {
         //    and that they are now known
         for decision in &decisions {
             match decision {
-                Decision::Reveal(c) | Decision::Flag(c) => {
+                Decision::Reveal(c) | Decision::Flag(c) | Decision::GuessReveal(c, _) => {
                     let true_variables: Vec<Coord<10, 10>> = set
                         .constraints
                         .iter()

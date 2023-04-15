@@ -135,6 +135,12 @@ impl<T, const W: usize, const H: usize> Matrix<T, W, H> {
     pub fn iter(&self) -> impl Iterator<Item = &[T; W]> {
         self.0.iter()
     }
+
+    /// Return an iterator for the rows
+    #[inline]
+    pub fn convert<U>(self, closure: impl FnMut(T) -> U + Copy) -> Matrix<U, W, H> {
+        Matrix(self.0.map(move |row| row.map(closure)))
+    }
 }
 
 impl<T, const W: usize, const H: usize> IntoIterator for Matrix<T, W, H> {

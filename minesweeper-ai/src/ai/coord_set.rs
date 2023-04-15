@@ -30,6 +30,37 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
         }
     }
 
+    /// TODO: Docs
+    const fn row(middle: bool) -> [bool; W] {
+        let mut row = [middle; W];
+        row[0] = !middle;
+        row[W - 1] = !middle;
+        row
+    }
+
+    /// TODO: Docs
+    pub const fn corners() -> CoordSet<W, H> {
+        let mut c = CoordSet {
+            matrix: Matrix([[false; W]; H]),
+        };
+        c.matrix.0[0] = CoordSet::<W, H>::row(false);
+        c.matrix.0[H - 1] = CoordSet::<W, H>::row(false);
+        c
+    }
+
+    /// TODO: Docs
+    pub const fn edges() -> CoordSet<W, H> {
+        let default = CoordSet::<W, H>::row(false);
+        let mut c = CoordSet {
+            matrix: Matrix([default; H]),
+        };
+        let top_bottom = CoordSet::<W, H>::row(true);
+
+        c.matrix.0[0] = top_bottom;
+        c.matrix.0[H - 1] = top_bottom;
+        c
+    }
+
     /// Inser the specified coordinate into the set.
     pub fn insert(&mut self, coord: Coord<W, H>) {
         self.matrix.set(coord, true);
@@ -95,15 +126,40 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
     ///
     /// assert_eq!(set.iter().collect::<Vec<_>>(), coords);
     /// ```
-    #[allow(dead_code)]
     pub fn iter(&self) -> impl Iterator<Item = Coord<W, H>> + '_ {
-        self.matrix
-            .0
-            .iter()
-            .flatten()
-            .enumerate()
-            .filter(|(_, c)| **c)
-            .map(|(i, _)| Coord((i % W) as u8, (i / W) as u8))
+        self.matrix.0.iter().enumerate().flat_map(|(y, row)| {
+            row.iter()
+                .enumerate()
+                .filter(|(_, c)| **c)
+                .map(move |(x, _)| Coord(x as u8, y as u8))
+        })
+    }
+
+    /// Return an iterator of all the existing coordinates.
+    /// ```
+    /// # use miinaharava::minefield::*;
+    /// # use minesweeper_ai::ai::coord_set::*;
+    /// use miinaharava::minefield::Matrix;
+    ///
+    /// let mut set = CoordSet {
+    ///     matrix: Matrix([
+    ///         [true, true, false],
+    ///         [false, true, false],
+    ///         [false, false, true]
+    ///     ])
+    /// };
+    ///
+    /// let coords = vec![Coord(0, 0), Coord(1, 0), Coord(1, 1), Coord(2, 2)];
+    ///
+    /// assert_eq!(set.iter().collect::<Vec<_>>(), coords);
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        for val in self.matrix.iter().flatten() {
+            if *val {
+                return false;
+            }
+        }
+        true
     }
 
     /// Returns an iterator, that returns a mutable boolean which you can use to
@@ -129,13 +185,12 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
     /// ```
     #[allow(dead_code)]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (&mut bool, Coord<W, H>)> + '_ {
-        self.matrix
-            .0
-            .iter_mut()
-            .flatten()
-            .enumerate()
-            .filter(|(_, c)| **c)
-            .map(|(i, c)| (c, Coord((i % W) as u8, (i / W) as u8)))
+        self.matrix.0.iter_mut().enumerate().flat_map(|(y, row)| {
+            row.iter_mut()
+                .enumerate()
+                .filter(|(_, c)| **c)
+                .map(move |(x, c)| (c, Coord(x as u8, y as u8)))
+        })
     }
 
     /// Insert all of the coordinates from the given iterator of coords.

@@ -20,9 +20,9 @@ pub struct SolutionList<const W: usize, const H: usize> {
     /// an array of the solutions that contain this amount of mines.
     pub solutions_by_mines: Vec<Vec<PossibleSolution>>,
     /// The smallest amount of mines in any solution
-    min_mines: u8,
+    pub min_mines: u8,
     /// The largest amount of mines
-    max_mines: u8,
+    pub max_mines: u8,
     /// The coordinates that the solutions indexes reflect.
     coords: Vec<Coord<W, H>>,
 }
@@ -132,10 +132,12 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
     pub fn find_best_guess(&self) -> (Coord<W, H>, f32) {
         let mut best_guess = None;
 
+        let len = self.iter().flatten().count();
+
         for (coord, guesses) in self.transposed_solution_coords() {
-            let propability = guesses.count_zeros() as f32 / guesses.len() as f32;
-            if let Some((coord, best_guess_p)) = best_guess {
-                if best_guess_p <= propability {
+            let propability = guesses.count_zeros() as f32 / len as f32;
+            if let Some((_, previous_guess_p)) = best_guess {
+                if propability > previous_guess_p {
                     best_guess = Some((coord, propability));
                 }
             } else {
@@ -269,6 +271,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         mut history: PossibleSolution,
         mut testing_field: KnownMinefield<W, H>,
     ) -> Option<Vec<PossibleSolution>> {
+        assert!(history.len() < list.len());
         let (coord, idx_vec) = &list[history.len()];
         testing_field.set(*coord, CellContent::Known(guess));
         for idx in idx_vec {

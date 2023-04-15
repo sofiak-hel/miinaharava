@@ -142,10 +142,18 @@ fn main() {
         let total_games = stats.games.0 + stats.games.1;
         let vic_perc = (stats.games.0 as f32 / total_games as f32) * 100.;
         let loss_perc = (stats.games.1 as f32 / total_games as f32) * 100.;
+        let guess_perc = (stats.successful_guesses as f32 / stats.amount_of_guesses as f32) * 100.;
 
         println!("-----------------");
         println!("Statistics:");
-        println!("Game difficulty: {:.1?}", difficulty);
+        println!("Amount of guesses: {}", stats.amount_of_guesses);
+        println!(
+            "  Successful: {} ({}%)",
+            stats.successful_guesses, guess_perc
+        );
+        println!("  Average guess: {}%", stats.average_guess);
+
+        println!("Game difficulty: {:?}", difficulty);
 
         println!("\n  Total time spent: {:.1?}", time);
 

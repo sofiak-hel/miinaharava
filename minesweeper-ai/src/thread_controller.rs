@@ -11,6 +11,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use fixed::{types::extra::U14, FixedU16, FixedU32};
 use miinaharava::minefield::{GameState, Minefield, Reveal};
 
 use crate::{ai::CSPState, ai::Decision};
@@ -220,6 +221,10 @@ pub struct StateStats {
     pub generation_time: Duration,
     /// How much time has been spent revealing or flagging tiles.
     pub decision_time: Duration,
+    pub amount_of_guesses: u32,
+    pub successful_guesses: u32,
+    pub average_guess: f32,
+    total_guess_probabilities: f32,
 }
 
 impl<const W: usize, const H: usize> State<W, H> {
@@ -265,6 +270,17 @@ impl<const W: usize, const H: usize> State<W, H> {
                 if let Some(reveals) = match decision {
                     Decision::Reveal(coord) => self.minefield.reveal(coord).ok(),
                     Decision::Flag(coord) => self.minefield.flag(coord).ok(),
+                    Decision::GuessReveal(coord, propability) => {
+                        self.stats.amount_of_guesses += 1;
+                        self.stats.total_guess_probabilities += propability.to_num::<f32>();
+                        let res = self.minefield.reveal(coord).ok();
+                        if res.is_some() && self.minefield.game_state() != GameState::GameOver {
+                            self.stats.successful_guesses += 1;
+                        }
+                        self.stats.average_guess = self.stats.total_guess_probabilities
+                            / self.stats.amount_of_guesses as f32;
+                        res
+                    }
                 } {
                     self.reveals.extend(reveals);
                 }

@@ -13,6 +13,7 @@ pub fn benchmark_specific_difficulty<const W: usize, const H: usize>(mines: u8) 
             if let Some(res) = match decision {
                 Flag(c) => minefield.flag(c).ok(),
                 Reveal(c) => minefield.reveal(c).ok(),
+                GuessReveal(c, _) => minefield.reveal(c).ok(),
             } {
                 reveals.extend(res);
             }

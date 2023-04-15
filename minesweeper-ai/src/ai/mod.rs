@@ -1,10 +1,11 @@
 //! TODO: Docs
 
 use arrayvec::ArrayVec;
+use fixed::{types::extra::U14, FixedU16};
 use miinaharava::minefield::{Cell, Coord, Matrix, Minefield, Reveal};
 use rand::seq::SliceRandom;
 
-use self::{constraint_sets::CoupledSets, constraints::Constraint};
+use self::{constraint_sets::CoupledSets, constraints::Constraint, coord_set::CoordSet};
 
 pub mod backtracking;
 pub mod constraint_sets;
@@ -24,13 +25,16 @@ pub enum CellContent {
     Unknown,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 /// Represents a single decision
 pub enum Decision<const W: usize, const H: usize> {
     /// Flag this coordinate as a mine
     Flag(Coord<W, H>),
     /// Reveal this coordinate
     Reveal(Coord<W, H>),
+    /// Reveal this coordinate, but this reveal was actually guessed with
+    /// propability the fixed point decimal
+    GuessReveal(Coord<W, H>, FixedU16<U14>),
 }
 
 /// Represents the AI state's own opinion on fields
@@ -54,22 +58,33 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
         minefield: &Minefield<W, H>,
     ) -> Vec<Decision<W, H>> {
         if reveals.is_empty() {
-            if self.constraint_sets.0.is_empty() {
-                vec![guess(minefield)]
-            } else {
-                let found_mines = self
-                    .known_fields
-                    .iter()
-                    .flatten()
-                    .filter(|c| **c == CellContent::Known(true))
-                    .count() as u8;
+            let found_mines = self
+                .known_fields
+                .iter()
+                .flatten()
+                .filter(|c| **c == CellContent::Known(true))
+                .count() as u8;
+            let remaining_mines = minefield.mines - found_mines;
 
-                let remaining_mines = minefield.mines - found_mines;
+            if self.constraint_sets.0.is_empty() {
+                let vars = self
+                    .constraint_sets
+                    .unconstrained_variables(&self.known_fields);
+                let len = vars.iter().count();
+                let propability = 1. - (remaining_mines as f32 / len as f32);
+                vec![Decision::GuessReveal(
+                    guess(
+                        self.constraint_sets
+                            .unconstrained_variables(&self.known_fields),
+                    ),
+                    FixedU16::from_num(propability),
+                )]
+            } else {
                 let solution_lists = self
                     .constraint_sets
                     .find_viable_solutions(remaining_mines, &self.known_fields);
                 let mut trivials = Vec::new();
-                for list in solution_lists {
+                for list in &solution_lists {
                     let res = list.find_trivial_decisions(&mut self.known_fields);
                     if !res.is_empty() {
                         trivials.extend(res);
@@ -77,21 +92,46 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
                 }
                 if trivials.is_empty() {
                     // TODO:
-                    // 2. do propability stuff here
-                    //   1. Calculate propabilities for all vars (propability of
-                    // being 0)
-                    //   2. Find amount of non-constrained vars (ncv) (just
-                    // combine all set.variables and then invert) (this will
-                    // actually contain known fields, filter them out)
-                    //   3. remaining_mines / amount of ncv's = P2 !
-                    //   4. Profit! (guess)
                     // 4. detect crap-shoot here? L8R
-                    vec![guess(minefield)]
+
+                    let mut solution_list_iter = solution_lists.iter();
+                    let first = solution_list_iter.next().unwrap();
+                    let mut best_guess = first.find_best_guess();
+                    let mut constrained_mines = first.min_mines;
+
+                    for solution_list in solution_list_iter {
+                        let (coord, propability) = solution_list.find_best_guess();
+                        constrained_mines += solution_list.min_mines;
+                        if propability > best_guess.1 {
+                            best_guess = (coord, propability);
+                        }
+                    }
+
+                    let unconstrained_mines = (remaining_mines - constrained_mines) as u32;
+                    let unconstrained_vars = self
+                        .constraint_sets
+                        .unconstrained_variables(&self.known_fields);
+
+                    if !unconstrained_vars.is_empty() {
+                        let len = unconstrained_vars.iter().count() as u32;
+                        assert!(len > 0);
+                        let non_mines = len - unconstrained_mines.min(len);
+                        let propability = non_mines as f32 / len as f32;
+                        if propability > best_guess.1 {
+                            best_guess = (guess(unconstrained_vars), propability);
+                        }
+                    }
+
+                    vec![Decision::GuessReveal(
+                        best_guess.0,
+                        FixedU16::from_num(best_guess.1),
+                    )]
                 } else {
                     for trivial in &trivials {
                         match trivial {
                             Decision::Reveal(c) => assert!(!minefield.mine_indices.get(*c)),
                             Decision::Flag(c) => assert!(minefield.mine_indices.get(*c)),
+                            Decision::GuessReveal(_, _) => {}
                         }
                     }
                     for set in &mut self.constraint_sets.0 {
@@ -176,7 +216,9 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
 
         decisions.retain(|decision| match decision {
             Decision::Flag(c) => minefield.field.get(*c) == Cell::Hidden,
-            Decision::Reveal(c) => !matches!(minefield.field.get(*c), Cell::Empty | Cell::Label(_)),
+            Decision::Reveal(c) | Decision::GuessReveal(c, _) => {
+                !matches!(minefield.field.get(*c), Cell::Empty | Cell::Label(_))
+            }
         });
 
         decisions
@@ -187,25 +229,31 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
 /// simply so that the game will never stagnate entirely.
 ///
 /// Still not very good, but at least it's trying
-pub fn guess<const W: usize, const H: usize>(minefield: &Minefield<W, H>) -> Decision<W, H> {
-    let corners: Vec<Coord<W, H>> = vec![
-        Coord(0, 0),
-        Coord(W as u8 - 1, 0),
-        Coord(0, H as u8 - 1),
-        Coord(W as u8 - 1, H as u8 - 1),
-    ]
-    .into_iter()
-    .filter(|coord| minefield.field.get(*coord) == Cell::Hidden)
-    .collect();
+pub fn guess<const W: usize, const H: usize>(mut available_vars: CoordSet<W, H>) -> Coord<W, H> {
+    let mut rng = rand::thread_rng();
 
-    if !corners.is_empty() {
-        let mut rng = rand::thread_rng();
-        Decision::Reveal(*corners.choose(&mut rng).unwrap())
+    let corners = CoordSet::corners().intersection(&available_vars);
+    let edges = CoordSet::edges().intersection(&available_vars);
+    available_vars.omit(&corners);
+    available_vars.omit(&edges);
+
+    let coord = if !corners.is_empty() {
+        *corners.iter().collect::<Vec<_>>().choose(&mut rng).unwrap()
+    } else if !edges.is_empty() {
+        *edges.iter().collect::<Vec<_>>().choose(&mut rng).unwrap()
     } else {
-        let mut coord = Coord::random();
-        while minefield.field.get(coord) != Cell::Hidden {
-            coord = Coord::random();
-        }
-        Decision::Reveal(coord)
-    }
+        *available_vars
+            .iter()
+            .collect::<Vec<_>>()
+            .choose(&mut rng)
+            .unwrap()
+    };
+
+    coord
+
+    // *available_vars
+    //     .iter()
+    //     .collect::<Vec<_>>()
+    //     .choose(&mut rng)
+    //     .unwrap()
 }
