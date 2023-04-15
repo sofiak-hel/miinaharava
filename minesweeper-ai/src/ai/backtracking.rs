@@ -8,6 +8,7 @@ use super::{
     CellContent, Decision, KnownMinefield,
 };
 
+/// Type alias for BitVec for better readibility.
 type PossibleSolution = BitVec;
 
 #[derive(Debug, Clone)]
@@ -139,8 +140,12 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
 }
 
 impl<const W: usize, const H: usize> ConstraintSet<W, H> {
+    /// Required for ARRAY_VEC_MATRIX
     const ARRAY_VEC_CONST: ArrayVec<usize, 8> = ArrayVec::new_const();
+    /// Required for ARRAY_VEC_MATRIX
     const ARRAY_VEC_CONST_W: [ArrayVec<usize, 8>; W] = [ConstraintSet::<W, H>::ARRAY_VEC_CONST; W];
+    /// An empty WxH matrix where each element is an ArrayVec of usize with a
+    /// max capacity of 8, used for [find_ordered]
     const ARRAY_VEC_MATRIX: [[ArrayVec<usize, 8>; W]; H] =
         [ConstraintSet::<W, H>::ARRAY_VEC_CONST_W; H];
 
