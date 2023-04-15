@@ -11,11 +11,18 @@ use super::{
 type PossibleSolution = BitVec;
 
 #[derive(Debug, Clone)]
-/// TODO: Docs
+/// Represents a list of solutions of a single set of coupled constraints a
+/// ([ConstraintSet])
 pub struct SolutionList<const W: usize, const H: usize> {
+    /// All of the solutions found (2D array), partitioned by the number of
+    /// mines, where the first index is the amount of mines, which then contains
+    /// an array of the solutions that contain this amount of mines.
     pub solutions_by_mines: Vec<Vec<PossibleSolution>>,
+    /// The smallest amount of mines in any solution
     min_mines: u8,
+    /// The largest amount of mines
     max_mines: u8,
+    /// The coordinates that the solutions indexes reflect.
     ordered: Vec<Coord<W, H>>,
 }
 
@@ -46,7 +53,8 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
         solution_list
     }
 
-    /// TODO: Docs
+    /// Safely get a list of solutions for any amount of mines. None if there
+    /// are no solutions for that amount of mines, Some if there might be.
     pub fn get(&self, mine_count: u8) -> Option<&Vec<PossibleSolution>> {
         if self.min_mines > mine_count || mine_count > self.max_mines {
             None
@@ -55,7 +63,7 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
         }
     }
 
-    /// TODO: Docs
+    /// Does the same as get, but a mutable list.
     pub fn get_mut(&mut self, mine_count: u8) -> Option<&mut Vec<PossibleSolution>> {
         if self.min_mines > mine_count || mine_count > self.max_mines {
             None
@@ -64,13 +72,16 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
         }
     }
 
-    /// TODO: Docs
+    /// Iterate through all the possible amount of mines, where next() returns a
+    /// vec of solutions which all have the same amount of mines.
     pub fn iter(&self) -> impl Iterator<Item = &Vec<PossibleSolution>> {
         (self.min_mines..=self.max_mines).map(|i| &self.solutions_by_mines[i as usize])
     }
 
-    /// TODO: Docs
-    pub fn find_trivial_solutions(&self, known: &mut KnownMinefield<W, H>) -> Vec<Decision<W, H>> {
+    /// Find all coordinates in this set of solutions that are expected to be a
+    /// mine or empty of a mine in every solution, meaning it is trivially
+    /// solvable.
+    pub fn find_trivial_decisions(&self, known: &mut KnownMinefield<W, H>) -> Vec<Decision<W, H>> {
         let mut decisions = Vec::new();
 
         for (i, coord) in self.ordered.iter().enumerate() {

@@ -37,7 +37,7 @@ fn test_solution_list_trivial_finder_with_nontrivial() {
         10,
     );
     let mut known = Matrix([[CellContent::Unknown; 7]; 7]);
-    let decisions = solution_list.find_trivial_solutions(&mut known);
+    let decisions = solution_list.find_trivial_decisions(&mut known);
     assert!(decisions.is_empty());
 }
 
@@ -66,7 +66,7 @@ fn test_solution_list_trivial_finder_with_random() {
         let solution_list = SolutionList::from(solutions.clone(), coords.clone(), 10);
         dbg!(&solution_list);
 
-        let decisions = solution_list.find_trivial_solutions(&mut known);
+        let decisions = solution_list.find_trivial_decisions(&mut known);
 
         for solution in solutions.iter().filter(|s| s.count_ones() > 10) {
             assert!(solution_list.iter().flatten().all(|s| s != solution));

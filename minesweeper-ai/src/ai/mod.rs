@@ -70,14 +70,13 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
                     .find_viable_solutions(remaining_mines, &self.known_fields);
                 let mut trivials = Vec::new();
                 for list in solution_lists {
-                    let res = list.find_trivial_solutions(&mut self.known_fields);
+                    let res = list.find_trivial_decisions(&mut self.known_fields);
                     if !res.is_empty() {
                         trivials.extend(res);
                     }
                 }
                 if trivials.is_empty() {
                     // TODO:
-                    // 1. simple test for SolutionList::find_trivial_solutions
                     // 2. do propability stuff here
                     //   1. Calculate propabilities for all vars (propability of
                     // being 0)
