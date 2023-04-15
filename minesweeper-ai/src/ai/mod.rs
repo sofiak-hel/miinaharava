@@ -118,9 +118,7 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
                 }
                 decisions.extend(res);
             }
-            if decisions.len() != prev_decisions {
-                self.constraint_sets.check_splits();
-            }
+            self.constraint_sets.check_splits();
             decisions.len() != prev_decisions
         } {
             prev_decisions = decisions.len()
@@ -198,20 +196,30 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
     ) -> Vec<Decision<W, H>> {
         let mut solution_list_iter = solution_lists.iter();
         let first = solution_list_iter.next().unwrap();
+        // let test = first
+        //     .solutions_by_mines
+        //     .iter()
+        //     .filter(|v| !v.is_empty())
+        //     .map(|v| v.iter().map(|v| v.to_string()).collect::<Vec<_>>())
+        //     .collect::<Vec<_>>();
+        // dbg!(&first);
+        // dbg!(&test);
         let mut best_guess = first.find_best_guess();
         let mut constrained_mines = first.min_mines;
 
         for solution_list in solution_list_iter {
+            // let test = solution_list
+            //     .solutions_by_mines
+            //     .iter()
+            //     .filter(|v| !v.is_empty())
+            //     .map(|v| v.iter().map(|v| v.to_string()).collect::<Vec<_>>())
+            //     .collect::<Vec<_>>();
+            // dbg!(&solution_list);
+            // dbg!(&test);
             let (coord, propability) = solution_list.find_best_guess();
             constrained_mines += solution_list.min_mines;
             if propability > best_guess.1 {
                 best_guess = (coord, propability);
-                let test = solution_list
-                    .solutions_by_mines
-                    .iter()
-                    .filter(|v| !v.is_empty())
-                    .map(|v| v.iter().map(|v| v.to_string()).collect::<Vec<_>>())
-                    .collect::<Vec<_>>();
             }
         }
 
