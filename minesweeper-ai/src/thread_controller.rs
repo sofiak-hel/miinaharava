@@ -221,10 +221,27 @@ pub struct StateStats {
     pub generation_time: Duration,
     /// How much time has been spent revealing or flagging tiles.
     pub decision_time: Duration,
+    /// A bracket for every 10th percentage level of guesses
+    pub guess_stats: [GuessStats; 10],
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct GuessStats {
     pub amount_of_guesses: u32,
     pub successful_guesses: u32,
     pub average_guess: f32,
     total_guess_probabilities: f32,
+}
+
+impl GuessStats {
+    /// Combine two instances of GuessStats (mainly useful for printing)
+    pub fn combine(&mut self, other: &GuessStats) -> &mut Self {
+        self.amount_of_guesses += other.amount_of_guesses;
+        self.successful_guesses += other.successful_guesses;
+        self.total_guess_probabilities += other.total_guess_probabilities;
+        self.average_guess = self.successful_guesses as f32 / self.total_guess_probabilities;
+        self
+    }
 }
 
 impl<const W: usize, const H: usize> State<W, H> {
@@ -271,14 +288,17 @@ impl<const W: usize, const H: usize> State<W, H> {
                     Decision::Reveal(coord) => self.minefield.reveal(coord).ok(),
                     Decision::Flag(coord) => self.minefield.flag(coord).ok(),
                     Decision::GuessReveal(coord, propability) => {
-                        self.stats.amount_of_guesses += 1;
-                        self.stats.total_guess_probabilities += propability.to_num::<f32>();
+                        let guess_stats = &mut self.stats.guess_stats
+                            [((propability.to_num::<f32>() * 10.).floor() as usize).min(9)];
+
+                        guess_stats.amount_of_guesses += 1;
+                        guess_stats.total_guess_probabilities += propability.to_num::<f32>();
                         let res = self.minefield.reveal(coord).ok();
                         if res.is_some() && self.minefield.game_state() != GameState::GameOver {
-                            self.stats.successful_guesses += 1;
+                            guess_stats.successful_guesses += 1;
                         }
-                        self.stats.average_guess = self.stats.total_guess_probabilities
-                            / self.stats.amount_of_guesses as f32;
+                        guess_stats.average_guess = guess_stats.total_guess_probabilities
+                            / guess_stats.amount_of_guesses as f32;
                         res
                     }
                 } {

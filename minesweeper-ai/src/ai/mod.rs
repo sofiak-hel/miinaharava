@@ -1,9 +1,11 @@
 //! TODO: Docs
 
 use arrayvec::ArrayVec;
-use fixed::{types::extra::U14, FixedU16};
+use fixed::{types::extra::U20, FixedU32};
 use miinaharava::minefield::{Cell, Coord, Matrix, Minefield, Reveal};
 use rand::seq::SliceRandom;
+
+use crate::ai::backtracking::SolutionContainer;
 
 use self::{
     backtracking::SolutionList, constraint_sets::CoupledSets, constraints::Constraint,
@@ -37,7 +39,7 @@ pub enum Decision<const W: usize, const H: usize> {
     Reveal(Coord<W, H>),
     /// Reveal this coordinate, but this reveal was actually guessed with
     /// propability the fixed point decimal
-    GuessReveal(Coord<W, H>, FixedU16<U14>),
+    GuessReveal(Coord<W, H>, FixedU32<U20>),
 }
 
 /// Represents the AI state's own opinion on fields
@@ -183,7 +185,7 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
             let propability = 1. - (remaining_mines as f32 / len as f32);
             vec![Decision::GuessReveal(
                 guess(vars),
-                FixedU16::from_num(propability),
+                FixedU32::from_num(propability),
             )]
         }
     }
@@ -194,37 +196,11 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
         solution_lists: Vec<SolutionList<W, H>>,
         remaining_mines: u8,
     ) -> Vec<Decision<W, H>> {
-        let mut solution_list_iter = solution_lists.iter();
-        let first = solution_list_iter.next().unwrap();
-        // let test = first
-        //     .solutions_by_mines
-        //     .iter()
-        //     .filter(|v| !v.is_empty())
-        //     .map(|v| v.iter().map(|v| v.to_string()).collect::<Vec<_>>())
-        //     .collect::<Vec<_>>();
-        // dbg!(&first);
-        // dbg!(&test);
-        let mut best_guess = first.find_best_guess();
-        let mut constrained_mines = first.min_mines;
+        // Find the best guess from solution lists
+        let mut best_guess = solution_lists.find_best_guess();
 
-        for solution_list in solution_list_iter {
-            // let test = solution_list
-            //     .solutions_by_mines
-            //     .iter()
-            //     .filter(|v| !v.is_empty())
-            //     .map(|v| v.iter().map(|v| v.to_string()).collect::<Vec<_>>())
-            //     .collect::<Vec<_>>();
-            // dbg!(&solution_list);
-            // dbg!(&test);
-            let (coord, propability) = solution_list.find_best_guess();
-            constrained_mines += solution_list.min_mines;
-            if propability > best_guess.1 {
-                best_guess = (coord, propability);
-            }
-        }
-
-        // Find out if unconstrained var has a better propability
-        let unconstrained_mines = (remaining_mines - constrained_mines) as u32;
+        // Find out if unconstrained vars have a better propability
+        let unconstrained_mines = (remaining_mines - solution_lists.min_mines()) as u32;
         let unconstrained_vars = self
             .constraint_sets
             .unconstrained_variables(&self.known_fields);
@@ -241,7 +217,7 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
         // Pick which one was better
         vec![Decision::GuessReveal(
             best_guess.0,
-            FixedU16::from_num(best_guess.1),
+            FixedU32::from_num(best_guess.1),
         )]
     }
 }

@@ -10,7 +10,7 @@ use miinaharava::{
     sdl2::{event::Event, keyboard::Keycode},
 };
 use std::time::{Duration, Instant};
-use thread_controller::{Difficulty, StateStats, StateWrapper, ThreadController};
+use thread_controller::{Difficulty, GuessStats, StateStats, StateWrapper, ThreadController};
 
 mod ai;
 mod thread_controller;
@@ -139,36 +139,7 @@ fn main() {
             (lock.stats(), Instant::now() - before)
         };
 
-        let total_games = stats.games.0 + stats.games.1;
-        let vic_perc = (stats.games.0 as f32 / total_games as f32) * 100.;
-        let loss_perc = (stats.games.1 as f32 / total_games as f32) * 100.;
-        let guess_perc = (stats.successful_guesses as f32 / stats.amount_of_guesses as f32) * 100.;
-
-        println!("-----------------");
-        println!("Statistics:");
-        println!("Amount of guesses: {}", stats.amount_of_guesses);
-        println!(
-            "  Successful: {} ({}%)",
-            stats.successful_guesses, guess_perc
-        );
-        println!("  Average guess: {}%", stats.average_guess * 100.);
-
-        println!("Game difficulty: {:?}", difficulty);
-
-        println!("\n  Total time spent: {:.1?}", time);
-
-        print!("    AI thinking: {:.1?}", stats.ai_time);
-        println!(" ({:.1?} avg.)", stats.ai_time / total_games);
-
-        print!("    flagging + revealing: {:.1?}", stats.decision_time);
-        println!(" ({:.1?} avg.)", stats.decision_time / total_games);
-
-        print!("    board generating: {:.1?}", stats.generation_time);
-        println!(" ({:.1?} avg.)", stats.generation_time / total_games);
-
-        println!("\n  Total games played: {}", stats.games.0 + stats.games.1);
-        println!("    Victories: {}, ({}%)", stats.games.0, vic_perc);
-        println!("    Losses: {}, ({}%)", stats.games.1, loss_perc);
+        stats.print(difficulty, time);
     } else {
         start_with_window(difficulty);
     }
@@ -239,4 +210,64 @@ fn difficulty_from_str(value: &str) -> Result<Difficulty, String> {
         "expert" | "ex" | "hard" => Difficulty::Expert,
         _ => Err("difficulty must be either 'easy', 'intermediate' or 'expert'")?,
     })
+}
+
+impl StateStats {
+    /// Prints the state stats in a neat manner
+    pub fn print(&self, difficulty: Difficulty, time: Duration) {
+        let total_games = self.games.0 + self.games.1;
+        let vic_perc = (self.games.0 as f32 / total_games as f32) * 100.;
+        let loss_perc = (self.games.1 as f32 / total_games as f32) * 100.;
+
+        println!("-----------------");
+        println!("Statistics:");
+        println!("Game difficulty: {:?}", difficulty);
+
+        println!("\n  Total time spent: {:.1?}", time);
+
+        print!("    AI thinking: {:.1?}", self.ai_time);
+        println!(" ({:.1?} avg.)", self.ai_time / total_games);
+
+        print!("    flagging + revealing: {:.1?}", self.decision_time);
+        println!(" ({:.1?} avg.)", self.decision_time / total_games);
+
+        print!("    board generating: {:.1?}", self.generation_time);
+        println!(" ({:.1?} avg.)", self.generation_time / total_games);
+
+        println!("\n  Total games played: {}", self.games.0 + self.games.1);
+        println!("    Victories: {}, ({}%)", self.games.0, vic_perc);
+        println!("    Losses: {}, ({}%)", self.games.1, loss_perc);
+
+        let mut clone = self.guess_stats;
+        let total_guesses = clone.iter_mut().reduce(|a, b| a.combine(b));
+
+        if let Some(total_guesses) = total_guesses {
+            println!("\nTotal guesses:");
+            total_guesses.print(total_games);
+        }
+
+        for (i, guess_stats) in self.guess_stats.iter().enumerate() {
+            if guess_stats.amount_of_guesses > 0 {
+                println!("\nStats for guesses ~{}-{}%", i * 10, (i + 1) * 10);
+                guess_stats.print(total_games);
+            }
+        }
+    }
+}
+
+impl GuessStats {
+    /// Prints some version of game stats in a neat manner
+    pub fn print(&self, total_games: u32) {
+        let guess_perc = (self.successful_guesses as f32 / self.amount_of_guesses as f32) * 100.;
+        println!("  Amount of guesses: {}", self.amount_of_guesses);
+        println!(
+            "  Successful: {} ({}%)",
+            self.successful_guesses, guess_perc
+        );
+        println!("  Average guess success: {}%", self.average_guess * 100.);
+        println!(
+            "  Average amount of guesses: {:.2}",
+            self.amount_of_guesses as f32 / total_games as f32
+        );
+    }
 }

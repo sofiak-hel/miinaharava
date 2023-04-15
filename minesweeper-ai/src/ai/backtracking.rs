@@ -11,6 +11,21 @@ use super::{
 /// Type alias for BitVec for better readibility.
 type PossibleSolution = BitVec;
 
+pub trait SolutionContainer<const W: usize, const H: usize> {
+    /// Find the best guess decision for this specific struct. Might not be the
+    /// best overall guess.
+    ///
+    /// The best guess is when you divide the amount of falses in every solution
+    /// for a given Coord and divide that by the amount of solutions. The Coord
+    /// that has the greatest propability is the most likely then to be empty of
+    /// a mine, and therefore the best guess.
+    fn find_best_guess(&self) -> (Coord<W, H>, f32);
+    /// Returns the minimum number of mines for these solutions
+    fn min_mines(&self) -> u8;
+    /// Returns the maximum number of mines for these solutions
+    fn max_mines(&self) -> u8;
+}
+
 #[derive(Debug, Clone)]
 /// Represents a list of solutions of a single set of coupled constraints a
 /// ([ConstraintSet])
@@ -121,15 +136,10 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
             (*coord, same_idx_solutions)
         })
     }
+}
 
-    /// Find the best guess decision for this set of solutions. Returns
-    /// coordinate and the likelyhood (0 - 1) that this coordinate is empty.   
-    ///
-    /// The best guess is when you divide the amount of falses in every solution
-    /// for a given Coord and divide that by the amount of solutions. The Coord
-    /// that has the greatest propability is the most likely then to be empty of
-    /// a mine, and therefore the best guess.
-    pub fn find_best_guess(&self) -> (Coord<W, H>, f32) {
+impl<const W: usize, const H: usize> SolutionContainer<W, H> for SolutionList<W, H> {
+    fn find_best_guess(&self) -> (Coord<W, H>, f32) {
         let mut best_guess = None;
 
         let len = self.iter().flatten().count();
@@ -145,7 +155,61 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
             }
         }
 
+        // if best_guess.unwrap().1 > 0.8 {
+        //     dbg!(&self
+        //         .iter()
+        //         .filter(|s| !s.is_empty())
+        //         .map(|s| s.iter().map(|s| s.to_string()).collect::<Vec<_>>())
+        //         .collect::<Vec<_>>());
+        //     dbg!(self.coords.iter().position(|c| *c == best_guess.unwrap().0));
+        //     dbg!(best_guess);
+        // }
+
         best_guess.unwrap()
+    }
+
+    fn max_mines(&self) -> u8 {
+        self.max_mines
+    }
+
+    fn min_mines(&self) -> u8 {
+        self.min_mines
+    }
+}
+
+impl<const W: usize, const H: usize, T: SolutionContainer<W, H>> SolutionContainer<W, H>
+    for Vec<T>
+{
+    fn find_best_guess(&self) -> (Coord<W, H>, f32) {
+        let mut best_guess = None;
+
+        for solution_list in self {
+            let (coord, propability) = solution_list.find_best_guess();
+            if let Some((_, old_propability)) = best_guess {
+                if propability > old_propability {
+                    best_guess = Some((coord, propability));
+                }
+            } else {
+                best_guess = Some((coord, propability))
+            }
+        }
+        best_guess.unwrap()
+    }
+
+    fn min_mines(&self) -> u8 {
+        let mut min_mines = 0;
+        for solution in self {
+            min_mines += solution.min_mines()
+        }
+        min_mines
+    }
+
+    fn max_mines(&self) -> u8 {
+        let mut min_mines = 0;
+        for solution in self {
+            min_mines += solution.max_mines()
+        }
+        min_mines
     }
 }
 
