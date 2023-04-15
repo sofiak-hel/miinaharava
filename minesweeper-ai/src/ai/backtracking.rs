@@ -12,15 +12,40 @@ type PossibleSolution = BitVec;
 
 #[derive(Debug, Clone)]
 /// TODO: Docs
-pub struct SolutionList<'a, const W: usize, const H: usize> {
+pub struct SolutionList<const W: usize, const H: usize> {
     pub solutions_by_mines: Vec<Vec<PossibleSolution>>,
     min_mines: u8,
     max_mines: u8,
-    ordered: Vec<(Coord<W, H>, ArrayVec<usize, 8>)>,
-    constraint_set: &'a ConstraintSet<W, H>,
+    ordered: Vec<Coord<W, H>>,
 }
 
-impl<'a, const W: usize, const H: usize> SolutionList<'a, W, H> {
+impl<const W: usize, const H: usize> SolutionList<W, H> {
+    /// Create a SolutionList from a list of solutions, the coords that these
+    /// solutions represent and the amount of remaining mines, that is used to
+    /// filter out any impossible solutions
+    pub fn from(
+        solutions: Vec<PossibleSolution>,
+        coords: Vec<Coord<W, H>>,
+        remaining_mines: u8,
+    ) -> SolutionList<W, H> {
+        let mut solution_list = SolutionList {
+            solutions_by_mines: vec![Vec::new(); (remaining_mines + 1) as usize],
+            min_mines: remaining_mines + 1,
+            max_mines: 0,
+            ordered: coords,
+        };
+        for solution in solutions {
+            let mine_count = solution.iter().filter(|c| **c).count() as u8;
+            if mine_count <= remaining_mines {
+                solution_list.solutions_by_mines[mine_count as usize].push(solution);
+                solution_list.min_mines = solution_list.min_mines.min(mine_count);
+                solution_list.max_mines = solution_list.max_mines.max(mine_count);
+            }
+        }
+
+        solution_list
+    }
+
     /// TODO: Docs
     pub fn get(&self, mine_count: u8) -> Option<&Vec<PossibleSolution>> {
         if self.min_mines > mine_count || mine_count > self.max_mines {
@@ -48,21 +73,20 @@ impl<'a, const W: usize, const H: usize> SolutionList<'a, W, H> {
     pub fn find_trivial_solutions(&self, known: &mut KnownMinefield<W, H>) -> Vec<Decision<W, H>> {
         let mut decisions = Vec::new();
 
-        'outer: for (i, (coord, _)) in self.ordered.iter().enumerate() {
-            let mut result: Option<bool> = None;
-            for solution in self.iter().flatten() {
-                let curr = solution[i];
-                match result {
-                    None => result = Some(curr),
-                    Some(val) if curr != val => {
-                        continue 'outer;
-                    }
-                    _ => {}
-                }
-            }
-            if let Some(val) = result {
-                known.set(*coord, CellContent::Known(val));
-                decisions.push(if val {
+        for (i, coord) in self.ordered.iter().enumerate() {
+            let same_idx_solutions = self.iter().flatten().map(|s| s[i]).collect::<BitVec>();
+
+            let result = if same_idx_solutions.all() {
+                Some(true)
+            } else if same_idx_solutions.not_any() {
+                Some(false)
+            } else {
+                None
+            };
+
+            if let Some(value) = result {
+                known.set(*coord, CellContent::Known(value));
+                decisions.push(if value {
                     Decision::Flag(*coord)
                 } else {
                     Decision::Reveal(*coord)
@@ -76,11 +100,11 @@ impl<'a, const W: usize, const H: usize> SolutionList<'a, W, H> {
 
 impl<const W: usize, const H: usize> CoupledSets<W, H> {
     /// TODO: Docs
-    pub fn find_viable_solutions<'a>(
-        &'a self,
+    pub fn find_viable_solutions(
+        &self,
         remaining_mines: u8,
         known_minefield: &KnownMinefield<W, H>,
-    ) -> Vec<SolutionList<'a, W, H>> {
+    ) -> Vec<SolutionList<W, H>> {
         let mut solution_lists = Vec::with_capacity(self.0.len());
         let mut min_mines = 0;
 
@@ -141,38 +165,26 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     }
 
     /// TODO: Docs
-    pub fn find_viable_solutions<'a>(
-        &'a self,
+    pub fn find_viable_solutions(
+        &self,
         remaining_mines: u8,
         known_field: &KnownMinefield<W, H>,
-    ) -> SolutionList<'a, W, H> {
+    ) -> SolutionList<W, H> {
         let ordered = self.find_ordered();
 
-        let mut results = if !ordered.is_empty() {
+        let mut solutions = if !ordered.is_empty() {
             self.test_both(&ordered, BitVec::new(), *known_field)
         } else {
             Vec::new()
         };
-        results.sort();
-        results.dedup();
+        solutions.sort();
+        solutions.dedup();
 
-        let mut returned = SolutionList {
-            solutions_by_mines: vec![Vec::new(); (remaining_mines + 1) as usize],
-            min_mines: remaining_mines + 1,
-            max_mines: 0,
-            ordered,
-            constraint_set: self,
-        };
-        for result in results {
-            let mine_count = result.iter().filter(|c| **c).count() as u8;
-            if mine_count <= remaining_mines {
-                returned.solutions_by_mines[mine_count as usize].push(result);
-                returned.min_mines = returned.min_mines.min(mine_count);
-                returned.max_mines = returned.max_mines.max(mine_count);
-            }
-        }
-
-        returned
+        SolutionList::from(
+            solutions,
+            ordered.into_iter().map(|o| o.0).collect(),
+            remaining_mines,
+        )
     }
 
     /// TODO: Docs
