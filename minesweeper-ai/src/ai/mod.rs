@@ -199,6 +199,16 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
         // Find the best guess from solution lists
         let mut best_guess = solution_lists.find_best_guess();
 
+        // if best_guess.1 > 0.8 {
+        //     dbg!(&self
+        //         .constraint_sets
+        //         .0
+        //         .iter()
+        //         .map(|c| &c.constraints)
+        //         .collect::<Vec<_>>());
+        //     dbg!(best_guess);
+        // }
+
         // Find out if unconstrained vars have a better propability
         let unconstrained_mines = (remaining_mines - solution_lists.min_mines()) as u32;
         let unconstrained_vars = self

@@ -142,10 +142,22 @@ impl<const W: usize, const H: usize> SolutionContainer<W, H> for SolutionList<W,
     fn find_best_guess(&self) -> (Coord<W, H>, f32) {
         let mut best_guess = None;
 
-        let len = self.iter().flatten().count();
+        let lens = self.iter().map(|c| c.len()).collect::<Vec<_>>();
 
         for (coord, guesses) in self.transposed_solution_coords() {
-            let propability = guesses.count_zeros() as f32 / len as f32;
+            let mut total_idx = 0;
+            let mut total_propability = 0.;
+            for len in &lens {
+                if *len != 0 {
+                    let curr_guesses = &guesses[total_idx..(total_idx + len)];
+                    let curr_propability =
+                        curr_guesses.count_zeros() as f32 / curr_guesses.len() as f32;
+                    total_propability += curr_propability;
+                    total_idx += len;
+                }
+            }
+            let propability = total_propability / lens.len() as f32;
+            assert!(propability <= 1.);
             if let Some((_, previous_guess_p)) = best_guess {
                 if propability > previous_guess_p {
                     best_guess = Some((coord, propability));
@@ -154,16 +166,6 @@ impl<const W: usize, const H: usize> SolutionContainer<W, H> for SolutionList<W,
                 best_guess = Some((coord, propability));
             }
         }
-
-        // if best_guess.unwrap().1 > 0.8 {
-        //     dbg!(&self
-        //         .iter()
-        //         .filter(|s| !s.is_empty())
-        //         .map(|s| s.iter().map(|s| s.to_string()).collect::<Vec<_>>())
-        //         .collect::<Vec<_>>());
-        //     dbg!(self.coords.iter().position(|c| *c == best_guess.unwrap().0));
-        //     dbg!(best_guess);
-        // }
 
         best_guess.unwrap()
     }
