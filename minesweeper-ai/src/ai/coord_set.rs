@@ -13,6 +13,17 @@ pub struct CoordSet<const W: usize, const H: usize> {
 impl<const W: usize, const H: usize> CoordSet<W, H> {
     /// Return a CoordSet where the value defines whether every cell is in it or
     /// not.
+    /// ```
+    /// # use miinaharava::minefield::*;
+    /// # use minesweeper_ai::ai::coord_set::*;
+    /// use miinaharava::minefield::Matrix;
+    ///
+    /// let mut set = CoordSet::<2, 2>::from(true);
+    ///
+    /// let coords = vec![Coord(0, 0), Coord(1, 0), Coord(0, 1), Coord(1, 1)];
+    ///
+    /// assert_eq!(set.iter().collect::<Vec<_>>(), coords);
+    /// ```
     pub fn from(val: bool) -> CoordSet<W, H> {
         CoordSet {
             matrix: Matrix::from(val),
@@ -25,16 +36,65 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
     }
 
     /// Remove a specified coordinate from the set.
+    /// ```
+    /// # use miinaharava::minefield::*;
+    /// # use minesweeper_ai::ai::coord_set::*;
+    /// use miinaharava::minefield::Matrix;
+    ///
+    /// let mut set = CoordSet {
+    ///     matrix: Matrix([
+    ///         [true, true, false],
+    ///         [false, true, false],
+    ///         [false, false, true]
+    ///     ])
+    /// };
+    ///
+    /// set.remove(Coord(1, 1));
+    ///
+    /// assert_eq!(set.contains(Coord(1, 1)), false);
+    /// ```
     pub fn remove(&mut self, coord: Coord<W, H>) {
         self.matrix.set(coord, false);
     }
 
     /// Check whether this coordinate exists in the set or not.
+    /// ```
+    /// # use miinaharava::minefield::*;
+    /// # use minesweeper_ai::ai::coord_set::*;
+    /// use miinaharava::minefield::Matrix;
+    ///
+    /// let mut set = CoordSet {
+    ///     matrix: Matrix([
+    ///         [true, true, false],
+    ///         [false, true, false],
+    ///         [false, false, true]
+    ///     ])
+    /// };
+    ///
+    /// assert_eq!(set.contains(Coord(1, 1)), true);
+    /// ```
     pub fn contains(&self, coord: Coord<W, H>) -> bool {
         self.matrix.get(coord)
     }
 
     /// Return an iterator of all the existing coordinates.
+    /// ```
+    /// # use miinaharava::minefield::*;
+    /// # use minesweeper_ai::ai::coord_set::*;
+    /// use miinaharava::minefield::Matrix;
+    ///
+    /// let mut set = CoordSet {
+    ///     matrix: Matrix([
+    ///         [true, true, false],
+    ///         [false, true, false],
+    ///         [false, false, true]
+    ///     ])
+    /// };
+    ///
+    /// let coords = vec![Coord(0, 0), Coord(1, 0), Coord(1, 1), Coord(2, 2)];
+    ///
+    /// assert_eq!(set.iter().collect::<Vec<_>>(), coords);
+    /// ```
     #[allow(dead_code)]
     pub fn iter(&self) -> impl Iterator<Item = Coord<W, H>> + '_ {
         self.matrix
@@ -49,6 +109,24 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
     /// Returns an iterator, that returns a mutable boolean which you can use to
     /// remove the specified coordinate, while also returning the specified
     /// coordinate.
+    /// ```
+    /// # use miinaharava::minefield::*;
+    /// # use minesweeper_ai::ai::coord_set::*;
+    ///
+    /// let mut set = CoordSet::<10, 10>::default();
+    ///
+    /// let coords = vec![Coord(5, 5), Coord(6, 6), Coord(7, 7)];
+    ///
+    /// set.insert_many(coords.clone().into_iter());
+    ///
+    /// for (exists, coord) in set.iter_mut() {
+    ///     if coord == Coord(5, 5) {
+    ///         *exists = false;
+    ///     }
+    /// }
+    ///
+    /// assert_eq!(set.contains(Coord(5, 5)), false);
+    /// ```
     #[allow(dead_code)]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (&mut bool, Coord<W, H>)> + '_ {
         self.matrix
