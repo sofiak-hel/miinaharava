@@ -93,11 +93,16 @@ pub struct Matrix<T, const W: usize, const H: usize>(pub [[T; W]; H]);
 
 impl<T: Copy + Default, const W: usize, const H: usize> Default for Matrix<T, W, H> {
     fn default() -> Self {
-        Matrix([[T::default(); W]; H])
+        Matrix::from(T::default())
     }
 }
 
 impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
+    /// Form a matrix, where every cell is initialized with the given value.
+    pub fn from(val: T) -> Self {
+        Matrix([[val; W]; H])
+    }
+
     /// Get element in position of Coord from the matrix
     #[inline]
     pub fn get(&self, coord: Coord<W, H>) -> T {
@@ -151,6 +156,7 @@ pub struct Minefield<const W: usize, const H: usize> {
     game_state: GameState,
 }
 
+/// Represents a reveal, returned by reveal and flag functions
 pub type Reveal<const W: usize, const H: usize> = (Coord<W, H>, Cell);
 
 impl<const W: usize, const H: usize> Minefield<W, H> {

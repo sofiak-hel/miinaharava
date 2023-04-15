@@ -63,6 +63,15 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
         }
         self.0 = new_vec;
     }
+
+    pub fn get_unconstrained_variables(&self) -> CoordSet<W, H> {
+        let mut unconstrained = CoordSet::from(true);
+        for set in &self.0 {
+            unconstrained.omit(&set.variables);
+        }
+
+        unconstrained
+    }
 }
 
 /// Coupled Constraints
