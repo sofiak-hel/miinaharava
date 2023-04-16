@@ -100,6 +100,9 @@ Total guesses:
   Average amount of guesses: 3.60
 ```
 
+## O-notation analysis
+To be done! I have not the energy to make this for this week, sorry!
+
 ## Project structure
 The project is split into two different entire programs.
 1. `miinaharava` is the actual minesweeper game with no AI, it is human playable.
