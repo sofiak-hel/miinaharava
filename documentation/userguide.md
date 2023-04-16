@@ -13,6 +13,13 @@ Running the ready built binaries as easy as:
 - `./minesweeper-ai` for the graphically appealing ai-version
 - `./minesweeper-ai --headless` for the headless performance-specific ai-version
 
+## Linux specific notes
+1. When unzipping the zip for linux, the binary is not executable at first and
+   you will need to run `sudo chmod +x minesweeper-ai` to run it.
+2. If you are running on [Wayland](https://wayland.freedesktop.org/), you will
+   need to specify environment variable `SDL_VIDEODRIVER=x11` in order to launch
+   the program, so ie. `SDL_VIDEODRIVER=x11 ./minesweeper-ai`
+
 # Building (and running) manually
 For this you need at least Cargo/Rust version `1.68.1`. Recommended way to
 install and update rust is using [rustup](https://rustup.rs/).
