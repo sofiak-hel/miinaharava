@@ -111,12 +111,6 @@ impl<T: Copy, const W: usize, const H: usize> Matrix<T, W, H> {
 }
 
 impl<T, const W: usize, const H: usize> Matrix<T, W, H> {
-    /// Get a reference to the item in the position of the Coord
-    #[inline]
-    pub fn get_ref(&self, coord: Coord<W, H>) -> &T {
-        &self.0[coord.1 as usize][coord.0 as usize]
-    }
-
     /// Get a mutable reference in a cell at the position of the coord in the
     /// Matrix
     #[inline]
@@ -135,12 +129,6 @@ impl<T, const W: usize, const H: usize> Matrix<T, W, H> {
     pub fn iter(&self) -> impl Iterator<Item = &[T; W]> {
         self.0.iter()
     }
-
-    /// Return an iterator for the rows
-    #[inline]
-    pub fn convert<U>(self, closure: impl FnMut(T) -> U + Copy) -> Matrix<U, W, H> {
-        Matrix(self.0.map(move |row| row.map(closure)))
-    }
 }
 
 impl<T, const W: usize, const H: usize> IntoIterator for Matrix<T, W, H> {
@@ -154,7 +142,7 @@ impl<T, const W: usize, const H: usize> IntoIterator for Matrix<T, W, H> {
 /// Represents a mechanical abstract minefield in minesweeper
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Minefield<const W: usize, const H: usize> {
-    pub mine_indices: Matrix<bool, W, H>,
+    mine_indices: Matrix<bool, W, H>,
     /// The visible field
     pub field: Matrix<Cell, W, H>,
     /// How many mines are in the field.

@@ -4,6 +4,7 @@ use bitvec::prelude::*;
 use bitvec::vec::BitVec;
 use miinaharava::minefield::{Coord, Matrix};
 use rand::seq::SliceRandom;
+use rand::Rng;
 
 use crate::ai::backtracking::solutions::{SolutionContainer, SolutionList};
 use crate::ai::coord_set::CoordSet;
@@ -167,6 +168,53 @@ fn test_solution_list_trivial_finder_with_random() {
         }
     }
 }
+/// Ensure min and max mines return the correct values
+#[test]
+fn test_solution_list_min_max() {
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..5000 {
+        let coord_amount = black_box(rand::random::<u8>() % 10 + 5);
+        let mut coord_set = CoordSet::<7, 7>::default();
+
+        // Get guaranteedly the coord_amount of coords.
+        let mut random_coords = CoordSet::<7, 7>::from(true).iter().collect::<Vec<_>>();
+        random_coords.shuffle(&mut rng);
+        for _ in 0..coord_amount {
+            coord_set.insert(random_coords.pop().unwrap());
+        }
+        let coords = coord_set.iter().collect::<Vec<_>>();
+
+        let max_mines = black_box(rand::random::<u8>() % (coord_amount - 4) + 4);
+        let min_mines = black_box(rand::random::<u8>() % (max_mines - 1) + 1);
+
+        // Generate empty solution lists for now
+        let solution_amount = black_box(rand::random::<u8>() % 10 + 5);
+        let mut solutions = Vec::with_capacity(solution_amount as usize);
+
+        let mut actual_min = u8::MAX;
+        let mut actual_max = 0;
+
+        for _ in 0..solution_amount {
+            let mut solution = bitvec![0; coords.len()];
+
+            let mine_amount = rng.gen_range(min_mines..=max_mines);
+            actual_min = actual_min.min(mine_amount);
+            actual_max = actual_max.max(mine_amount);
+
+            let mut idx_list = (0..coord_amount).collect::<Vec<_>>();
+            idx_list.shuffle(&mut rng);
+            for idx in idx_list.iter().take(mine_amount as usize) {
+                solution.set(*idx as usize, true);
+            }
+            solutions.push(solution);
+        }
+
+        let solution_list = SolutionList::from(solutions.clone(), coords.clone(), 100);
+        assert_eq!(solution_list.min_mines(), actual_min);
+        assert_eq!(solution_list.max_mines(), actual_max);
+    }
+}
 
 /// Ensure that the best guess is always found correctly, at least if the best
 /// guess is trivial.
@@ -231,7 +279,7 @@ fn test_find_best_guess() {
     }
 }
 
-struct BestGuessMock<const W: usize, const H: usize>(Coord<W, H>, f32, u8);
+struct BestGuessMock<const W: usize, const H: usize>(Coord<W, H>, f32, u8, u8);
 
 impl<const W: usize, const H: usize> SolutionContainer<W, H> for BestGuessMock<W, H> {
     fn find_best_guess(&self) -> (Coord<W, H>, f32) {
@@ -239,7 +287,7 @@ impl<const W: usize, const H: usize> SolutionContainer<W, H> for BestGuessMock<W
     }
 
     fn max_mines(&self) -> u8 {
-        self.2
+        self.3
     }
 
     fn min_mines(&self) -> u8 {
@@ -266,7 +314,12 @@ fn test_find_best_guess_from_vec() {
         let best_guess_amount = black_box(rand::random::<u8>() % 50 + 50);
         let best_guess_coord = random_coords.pop().unwrap();
         let best_guess_propability = best_guess_amount as f32 / hypothetical_max;
-        mock_guesses.push(BestGuessMock(best_guess_coord, best_guess_propability, 10));
+        mock_guesses.push(BestGuessMock(
+            best_guess_coord,
+            best_guess_propability,
+            10,
+            10,
+        ));
 
         let non_best_guess_max = best_guess_amount - 25;
 
@@ -276,6 +329,7 @@ fn test_find_best_guess_from_vec() {
                 random_coords.pop().unwrap(),
                 random_amount as f32 / hypothetical_max,
                 10,
+                10,
             ));
         }
 
@@ -283,5 +337,52 @@ fn test_find_best_guess_from_vec() {
 
         let best_guess = mock_guesses.find_best_guess();
         assert_eq!(best_guess, (best_guess_coord, best_guess_propability));
+    }
+}
+
+/// Ensure that the best guess is always found correctly, at least if the best
+/// guess is trivial.
+#[test]
+fn test_mines_min_max_from_vec() {
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..5000 {
+        // Get guaranteedly the coord_amount of coords.
+        let mut random_coords = CoordSet::<7, 7>::from(true).iter().collect::<Vec<_>>();
+        random_coords.shuffle(&mut rng);
+
+        let hypothetical_max = 100.;
+
+        let max_mines = black_box(rand::random::<u8>() % 5 + 5);
+        let min_mines = black_box(rand::random::<u8>() % (max_mines - 4) + 4);
+
+        dbg!(min_mines);
+        dbg!(max_mines);
+
+        let solution_amount = black_box(rand::random::<u8>() % 10 + 10);
+        let mut mock_guesses = Vec::new();
+
+        let mut actual_min_mines = 0;
+        let mut actual_max_mines = 0;
+
+        for _ in 0..solution_amount {
+            let random_amount = black_box(rand::random::<u8>() % 100);
+            let max = rng.gen_range(min_mines..=max_mines);
+            let min = rng.gen_range(min_mines..=max);
+            dbg!(min, max);
+            actual_min_mines += min;
+            actual_max_mines += max;
+            mock_guesses.push(BestGuessMock(
+                random_coords.pop().unwrap(),
+                random_amount as f32 / hypothetical_max,
+                min,
+                max,
+            ));
+        }
+
+        mock_guesses.shuffle(&mut rng);
+
+        assert_eq!(mock_guesses.min_mines(), actual_min_mines);
+        assert_eq!(mock_guesses.max_mines(), actual_max_mines);
     }
 }

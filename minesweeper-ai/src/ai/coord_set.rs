@@ -269,22 +269,6 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
         }
     }
 
-    /// Returns whether two coordsets have any values in common.
-    pub fn have_coords_in_common(&self, other: &CoordSet<W, H>) -> bool {
-        for (a, b) in self
-            .matrix
-            .0
-            .iter()
-            .flatten()
-            .zip(other.matrix.0.iter().flatten())
-        {
-            if *a && *b {
-                return true;
-            }
-        }
-        false
-    }
-
     /// Returns an intersection of two coordsets, meaning the returned CoordSet
     /// will have only the coordinates that exist in both sets.
     pub fn intersection(&self, other: &CoordSet<W, H>) -> CoordSet<W, H> {
