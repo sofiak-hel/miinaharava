@@ -1,12 +1,7 @@
 
 # User Guide
-Ready built binaries for Linux and Windows can be found on Releases if any
-exist, and if you like to live on the edge, also every successful commit has
-build artifacts on GitHub which should stay there for around a week. 
-
-Example link to a successful (probably very old!) build summary, which had
-artifacts at the time of writing:
-https://github.com/sofiak-hel/minesweeper/actions/runs/4585211015#artifacts
+Ready built binaries for Linux and Windows can be found on Releases here
+https://github.com/sofiak-hel/minesweeper/releases/tag/code-review-1
 
 Running the ready built binaries as easy as:
 - `./miinaharava` for the human-playable game
