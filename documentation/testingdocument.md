@@ -106,7 +106,9 @@ Constraint Sets on the other hand are tested very thoroughly.
 1. It's tested that combining sets via drain and combine works correctly.
 2. Reduce is tested thoroughly so that after reduce there is no possible subsets
    remaining.
-3. Trivial solving is tested so that it is always able to find the trivial solutios; constraints that have the same number of variables as it's label, or if it's label is 0, meaning all of the variables have to be 0.
+3. Trivial solving is tested so that it is always able to find the trivial
+   solutios; constraints that have the same number of variables as it's label,
+   or if it's label is 0, meaning all of the variables have to be 0.
 4. Reduce and trivial solving are tested to be idempotent, meaning they have no
    effect if they are executed twice in a row.
 5. Splitting constraint sets is tested so that after the split there should

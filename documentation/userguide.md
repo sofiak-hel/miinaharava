@@ -1,5 +1,5 @@
 
-# Running
+# User Guide
 Ready built binaries for Linux and Windows can be found on Releases if any
 exist, and if you like to live on the edge, also every successful commit has
 build artifacts on GitHub which should stay there for around a week. 
