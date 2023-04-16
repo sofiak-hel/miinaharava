@@ -21,9 +21,15 @@ fn main() {
     while let Some(diff) = difficulty {
         game.extra_layout.clear();
         game.append_extra(format!("Difficulty: {:?}\n\n", diff), None, None);
-        game.append_keybind("1", format!("{:?}", Difficulty::Easy));
-        game.append_keybind("2", format!("{:?}", Difficulty::Intermediate));
-        game.append_keybind("3", format!("{:?}", Difficulty::Expert));
+        game.append_keybind("1", format!("{:?}", Difficulty::Easy), None, None, None);
+        game.append_keybind(
+            "2",
+            format!("{:?}", Difficulty::Intermediate),
+            None,
+            None,
+            None,
+        );
+        game.append_keybind("3", format!("{:?}", Difficulty::Expert), None, None, None);
         difficulty = start_game(&mut game, diff);
     }
 }

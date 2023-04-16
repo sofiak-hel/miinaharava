@@ -75,31 +75,45 @@ impl<'a> VisualState<'a> {
     /// other useful information about the current game.
     fn draw_layout(&mut self, stats: &StateStats) {
         self.game.extra_layout.clear();
-        self.game.append_keybind("1", "Easy");
-        self.game.append_keybind("2", "Intermediate");
-        self.game.append_keybind("3", "Expert");
-        self.game.append_keybind("Space", "Toggle Pause");
+        self.game.append_keybind("1", "Easy", Some(25.), None, None);
         self.game
-            .append_keybind("Up/Down", format!("Delay {:.1?}\n", self.delay));
+            .append_keybind("2", "Intermediate", Some(25.), None, None);
+        self.game
+            .append_keybind("3", "Expert", Some(25.), None, None);
+        self.game
+            .append_keybind("Space", "Toggle Pause", Some(25.), None, None);
+        self.game.append_keybind(
+            "Up/Down",
+            format!("Delay {:.1?}\n", self.delay),
+            Some(25.),
+            None,
+            None,
+        );
 
         let total_games = stats.games.0 + stats.games.1;
         let victory_percent = (stats.games.0 as f32 / total_games as f32) * 100.;
         let average_game = stats.ai_time / total_games.max(1);
 
-        self.game
-            .append_extra(format!("Games played: {:?}\n", total_games), None, None);
+        self.game.append_extra(
+            format!("Games played: {:?}\n", total_games),
+            Some(25.),
+            None,
+        );
         self.game.append_extra(
             format!("  {} ({:.0}%) Success\n", stats.games.1, victory_percent),
-            None,
+            Some(25.),
             None,
         );
         self.game.append_extra(
             format!("AI Time Spent: {:.0?}\n", stats.ai_time),
-            None,
+            Some(25.),
             None,
         );
-        self.game
-            .append_extra(format!("Avg. game: {:.0?}\n", average_game), None, None);
+        self.game.append_extra(
+            format!("Avg. game: {:.0?}\n", average_game),
+            Some(25.),
+            None,
+        );
     }
 }
 

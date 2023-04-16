@@ -114,9 +114,9 @@ impl<'a> Game<'a> {
         });
         let mut extra_layout = Layout::new(CoordinateSystem::PositiveYDown);
         extra_layout.reset(&LayoutSettings {
-            x: 850.,
+            x: 910.,
             y: 230.,
-            max_width: Some(450.),
+            max_width: Some(370.),
             horizontal_align: HorizontalAlign::Left,
             ..Default::default()
         });
@@ -239,9 +239,17 @@ impl<'a> Game<'a> {
     /// of text and coloring, in the following format:
     ///
     /// `<red>[keybind]<clear> description`
-    pub fn append_keybind<T: Into<String>, U: Into<String>>(&mut self, keybind: T, description: U) {
-        self.append_extra(format!("[{}] ", keybind.into()), None, Some(Color::RED));
-        self.append_extra(format!("{}\n", description.into()), None, None);
+    pub fn append_keybind<T: Into<String>, U: Into<String>>(
+        &mut self,
+        keybind: T,
+        description: U,
+        size: Option<f32>,
+        keybind_color: Option<Color>,
+        color: Option<Color>,
+    ) {
+        let keybind_color = keybind_color.unwrap_or(Color::RED);
+        self.append_extra(format!("[{}] ", keybind.into()), size, Some(keybind_color));
+        self.append_extra(format!("{}\n", description.into()), size, color);
     }
 
     fn append_text<T: Into<String>>(&mut self, text: T, size: Option<f32>, color: Option<Color>) {
