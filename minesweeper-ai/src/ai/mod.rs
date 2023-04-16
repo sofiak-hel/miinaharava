@@ -159,9 +159,8 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
             .constraint_sets
             .find_viable_solutions(remaining_mines, &self.known_fields);
 
-        // if no solutions, just make an educated guess
         if !solution_lists.is_empty() {
-            // Find trivial solutions
+            // if there are solutions, try find trivial solutions
             let mut trivials = Vec::new();
             for list in &solution_lists {
                 let res = list.find_trivial_decisions(&mut self.known_fields);
@@ -170,14 +169,38 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
                 }
             }
             if !trivials.is_empty() {
+                // Trivial solutions found => just mark those
                 for set in &mut self.constraint_sets.0 {
                     trivials.extend(set.solve_trivial_cases(&mut self.known_fields));
                 }
                 trivials
             } else {
-                self.perform_best_guess(solution_lists, remaining_mines)
+                // No trivial solutions, find best guess for given solutions
+                let mut best_guess = solution_lists.find_best_guess();
+
+                // Find out if unconstrained vars have a better propability
+                let unconstrained_mines = (remaining_mines - solution_lists.min_mines()) as u32;
+                let unconstrained_vars = self
+                    .constraint_sets
+                    .unconstrained_variables(&self.known_fields);
+                if !unconstrained_vars.is_empty() {
+                    let len = unconstrained_vars.iter().count() as u32;
+                    assert!(len > 0);
+                    let non_mines = len - unconstrained_mines.min(len);
+                    let propability = non_mines as f32 / len as f32;
+                    if propability > best_guess.1 {
+                        best_guess = (guess(unconstrained_vars), propability);
+                    }
+                }
+
+                // Pick which one was better
+                vec![Decision::GuessReveal(
+                    best_guess.0,
+                    FixedU32::from_num(best_guess.1),
+                )]
             }
         } else {
+            // No solutions were available => just guess
             let vars = self
                 .constraint_sets
                 .unconstrained_variables(&self.known_fields);
@@ -188,47 +211,6 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
                 FixedU32::from_num(propability),
             )]
         }
-    }
-
-    /// TODO: Docs
-    pub fn perform_best_guess(
-        &mut self,
-        solution_lists: Vec<SolutionList<W, H>>,
-        remaining_mines: u8,
-    ) -> Vec<Decision<W, H>> {
-        // Find the best guess from solution lists
-        let mut best_guess = solution_lists.find_best_guess();
-
-        // if best_guess.1 > 0.8 {
-        //     dbg!(&self
-        //         .constraint_sets
-        //         .0
-        //         .iter()
-        //         .map(|c| &c.constraints)
-        //         .collect::<Vec<_>>());
-        //     dbg!(best_guess);
-        // }
-
-        // Find out if unconstrained vars have a better propability
-        let unconstrained_mines = (remaining_mines - solution_lists.min_mines()) as u32;
-        let unconstrained_vars = self
-            .constraint_sets
-            .unconstrained_variables(&self.known_fields);
-        if !unconstrained_vars.is_empty() {
-            let len = unconstrained_vars.iter().count() as u32;
-            assert!(len > 0);
-            let non_mines = len - unconstrained_mines.min(len);
-            let propability = non_mines as f32 / len as f32;
-            if propability > best_guess.1 {
-                best_guess = (guess(unconstrained_vars), propability);
-            }
-        }
-
-        // Pick which one was better
-        vec![Decision::GuessReveal(
-            best_guess.0,
-            FixedU32::from_num(best_guess.1),
-        )]
     }
 }
 
