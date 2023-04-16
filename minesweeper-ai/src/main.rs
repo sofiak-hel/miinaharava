@@ -173,7 +173,7 @@ fn start_with_window(difficulty: Difficulty) {
 
     game.timer = 0.;
     game.timer_paused = false;
-    game.extra_layout_size = 25.;
+    game.extra_layout_default_size = 25.;
     let mut state = VisualState {
         controller: ThreadController::start(difficulty.into(), game.timer_paused, None),
         delay: Duration::from_millis(25),

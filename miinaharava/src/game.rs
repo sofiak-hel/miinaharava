@@ -83,9 +83,12 @@ pub struct Game<'a> {
     /// Extra layout for use in the implemented binary. Meant for use for text
     /// which helps with user input.
     pub extra_layout: Layout<Color>,
-    pub extra_layout_size: f32,
+    /// Default size for the extra layout text
+    pub extra_layout_default_size: f32,
+    /// Color for the extra layout keybinds
     pub extra_layout_keybind_color: Color,
-    pub extra_layout_color: Color,
+    /// Default color for the extra layout text
+    pub extra_layout_default_color: Color,
 }
 
 /// Events propagated from sdl2 [EventPump], contains [Event]s themselves and
@@ -136,9 +139,9 @@ impl<'a> Game<'a> {
             timer_paused: true,
             quit: false,
             extra_layout,
-            extra_layout_color: Color::RGB(0xFF, 0xFF, 0),
+            extra_layout_default_color: Color::RGB(0xFF, 0xFF, 0),
             extra_layout_keybind_color: Color::RED,
-            extra_layout_size: 32.,
+            extra_layout_default_size: 32.,
         }
     }
 
@@ -233,8 +236,8 @@ impl<'a> Game<'a> {
         size: Option<f32>,
         color: Option<Color>,
     ) {
-        let size = size.unwrap_or(self.extra_layout_size);
-        let color = color.unwrap_or(self.extra_layout_color);
+        let size = size.unwrap_or(self.extra_layout_default_size);
+        let color = color.unwrap_or(self.extra_layout_default_color);
         self.extra_layout.append(
             &self.fonts,
             &TextStyle::with_user_data(&text.into(), size, 0, color),
