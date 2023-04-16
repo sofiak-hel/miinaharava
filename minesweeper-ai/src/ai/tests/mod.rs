@@ -120,10 +120,36 @@ fn test_csp_ponder_with_reveals() {
 }
 
 #[test]
-fn guess_is_a_corner() {
-    for _ in 0..100 {
+fn first_guess_is_a_corner() {
+    for _ in 0..1000 {
         let decision = guess(CoordSet::<10, 10>::from(true));
         assert!(matches!(decision, Coord(0 | 9, 0 | 9)));
+    }
+}
+
+#[test]
+fn guess_without_corner_is_edge() {
+    for _ in 0..1000 {
+        let mut available = CoordSet::<10, 10>::from(true);
+        available.omit(&CoordSet::corners());
+
+        let decision = guess(available);
+        assert!(
+            matches!(decision, Coord(x, 0 | 9) if x > 0 && x < 9)
+                || matches!(decision, Coord(0 | 9, y) if y > 0 && y < 9)
+        );
+    }
+}
+
+#[test]
+fn guess_without_corners_or_edges_is_middle() {
+    for _ in 0..1000 {
+        let mut available = CoordSet::<10, 10>::from(true);
+        available.omit(&CoordSet::corners());
+        available.omit(&CoordSet::edges());
+
+        let decision = guess(available);
+        assert!(matches!(decision, Coord(x, y) if x > 0 && x < 9 && y > 0 && y < 9));
     }
 }
 
