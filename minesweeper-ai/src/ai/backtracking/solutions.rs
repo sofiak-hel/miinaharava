@@ -1,3 +1,7 @@
+//! This module is seperated by the functionality of handling solutions once
+//! they are found via the backtracking algorithm. Represents mostly
+//! [SolutionList].
+
 use bitvec::vec::BitVec;
 use miinaharava::minefield::Coord;
 
@@ -6,6 +10,7 @@ use crate::ai::{CellContent, Decision, KnownMinefield};
 /// Type alias for BitVec for better readibility.
 pub type PossibleSolution = BitVec;
 
+/// Trait that represents something that contains a set of solutions
 pub trait SolutionContainer<const W: usize, const H: usize> {
     /// Find the best guess decision for this specific struct. Might not be the
     /// best overall guess.
@@ -66,6 +71,7 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
 
     /// Safely get a list of solutions for any amount of mines. None if there
     /// are no solutions for that amount of mines, Some if there might be.
+    #[allow(dead_code)]
     pub fn get(&self, mine_count: u8) -> Option<&Vec<PossibleSolution>> {
         if self.min_mines > mine_count || mine_count > self.max_mines {
             None
