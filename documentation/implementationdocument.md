@@ -19,6 +19,10 @@ the same tests with a different processor might yield different results.
 As it is, I think these results are already pretty good, but could possibly be
 improved upon.
 
+These numbers represent how long it took to generate a field, solve it using the
+AI and process revealing and flagging of the tiles that the AI decided. So it
+represents the total time it takes from generation to victory or loss.
+
 |               | easy     | intermediate | expert    |
 |---------------|:--------:|:------------:|:---------:|
 | Manual        | `18.5µs` | `93.7µs`     | `424.2µs` |
