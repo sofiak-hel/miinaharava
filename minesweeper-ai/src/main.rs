@@ -104,6 +104,7 @@ fn main() {
     let args: CommandLineArguments = argh::from_env();
     let difficulty = args.difficulty.unwrap_or(Difficulty::Easy);
     let duration = args.seconds.map(|s| Duration::from_secs(s as u64));
+    let threads = args.threads.unwrap_or(1);
 
     if args.headless {
         let max_games = if duration.is_none() {
@@ -111,20 +112,30 @@ fn main() {
         } else {
             args.games
         };
-        let (stats, time) = {
+        let (mut stats, time) = {
             let before = Instant::now();
-            let thread_controller = ThreadController::start(difficulty.into(), false, max_games);
+            let mut thread_controllers = Vec::with_capacity(threads as usize);
+            for _ in 0..threads {
+                thread_controllers.push(ThreadController::start(
+                    difficulty.into(),
+                    false,
+                    max_games,
+                ));
+            }
             loop {
                 if let Some(max_games) = max_games {
-                    let stats = {
-                        let state = thread_controller.state.lock().unwrap();
-                        state.stats()
-                    };
-                    let total = stats.games.0 + stats.games.1;
-                    if total >= max_games {
+                    let mut total_games = 0;
+                    for controller in &thread_controllers {
+                        let stats = {
+                            let state = controller.state.lock().unwrap();
+                            state.stats()
+                        };
+                        total_games += stats.games.0 + stats.games.1;
+                    }
+                    if total_games >= max_games {
                         break;
                     }
-                    println!(" {} / {}", stats.games.0 + stats.games.1, max_games);
+                    println!(" {} / {}", total_games, max_games);
                 }
                 if let Some(duration) = duration {
                     let passed = Instant::now() - before;
@@ -135,11 +146,17 @@ fn main() {
                 }
                 std::thread::sleep(Duration::from_millis(100));
             }
-            let lock = thread_controller.state.lock().unwrap();
-            (lock.stats(), Instant::now() - before)
+            let mut stats = Vec::new();
+            for controller in thread_controllers {
+                let lock = controller.state.lock().unwrap();
+                stats.push(lock.stats());
+            }
+            (stats, Instant::now() - before)
         };
-
-        stats.print(difficulty, time);
+        let stats = stats.iter_mut().reduce(|a, b| a.combine(b));
+        if let Some(stats) = stats {
+            stats.print(args, difficulty, time);
+        }
     } else {
         start_with_window(difficulty);
     }
@@ -190,16 +207,24 @@ struct CommandLineArguments {
     headless: bool,
 
     /// difficulty of the game, easy by default
-    #[argh(option, from_str_fn(difficulty_from_str))]
+    #[argh(option, from_str_fn(difficulty_from_str), short = 'd')]
     difficulty: Option<Difficulty>,
 
     /// number of games that should be played, 1000 by default (does not apply on windowed-mode)
-    #[argh(option)]
+    #[argh(option, short = 'g')]
     games: Option<u32>,
 
     /// number of seconds to play games (if used with games, first one to finish halts program)
-    #[argh(option)]
+    #[argh(option, short = 's')]
     seconds: Option<u32>,
+
+    /// show seperate statistics for guesses that are separated by the guess % in 10ths.
+    #[argh(switch)]
+    show_stepped_guesses: bool,
+
+    /// number of threads used to run simultaneous games, affects only headless mode. Defaults to 1.
+    #[argh(option, short = 't')]
+    threads: Option<u32>,
 }
 
 /// Try to parse difficulty from string
@@ -214,7 +239,7 @@ fn difficulty_from_str(value: &str) -> Result<Difficulty, String> {
 
 impl StateStats {
     /// Prints the state stats in a neat manner
-    pub fn print(&self, difficulty: Difficulty, time: Duration) {
+    fn print(&self, args: CommandLineArguments, difficulty: Difficulty, time: Duration) {
         let total_games = self.games.0 + self.games.1;
         let vic_perc = (self.games.0 as f32 / total_games as f32) * 100.;
         let loss_perc = (self.games.1 as f32 / total_games as f32) * 100.;
@@ -223,7 +248,11 @@ impl StateStats {
         println!("Statistics:");
         println!("Game difficulty: {:?}", difficulty);
 
-        println!("\n  Total time spent: {:.1?}", time);
+        println!(
+            "\n  Total time spent: {:.1?} (in {} thread(s))",
+            time,
+            args.threads.unwrap_or(1)
+        );
 
         print!("    AI thinking: {:.1?}", self.ai_time);
         println!(" ({:.1?} avg.)", self.ai_time / total_games);
@@ -246,10 +275,12 @@ impl StateStats {
             total_guesses.print(total_games);
         }
 
-        for (i, guess_stats) in self.guess_stats.iter().enumerate() {
-            if guess_stats.amount_of_guesses > 0 {
-                println!("\nStats for guesses ~{}-{}%", i * 10, (i + 1) * 10);
-                guess_stats.print(total_games);
+        if args.show_stepped_guesses {
+            for (i, guess_stats) in self.guess_stats.iter().enumerate() {
+                if guess_stats.amount_of_guesses > 0 {
+                    println!("\nStats for guesses ~{}-{}%", i * 10, (i + 1) * 10);
+                    guess_stats.print(total_games);
+                }
             }
         }
     }

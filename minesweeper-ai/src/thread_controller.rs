@@ -200,6 +200,21 @@ pub struct StateStats {
     pub guess_stats: [GuessStats; 10],
 }
 
+impl StateStats {
+    /// Combine two state stats, used for multithreaded runs
+    pub fn combine(&mut self, other: &StateStats) -> &mut Self {
+        self.games.0 += other.games.0;
+        self.games.1 += other.games.1;
+        self.ai_time += other.ai_time;
+        self.generation_time += other.generation_time;
+        self.decision_time += other.decision_time;
+        for (stat1, stat2) in self.guess_stats.iter_mut().zip(other.guess_stats.iter()) {
+            stat1.combine(stat2);
+        }
+        self
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct GuessStats {
     pub amount_of_guesses: u32,
