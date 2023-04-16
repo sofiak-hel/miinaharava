@@ -187,14 +187,14 @@ fn test_find_best_guess() {
         let coords = coord_set.iter().collect::<Vec<_>>();
 
         // Generate empty solution lists for now
-        let solution_amount = rand::random::<u8>() % 10 + 5;
+        let solution_amount = black_box(rand::random::<u8>() % 10 + 5);
         let mut solutions = Vec::with_capacity(solution_amount as usize);
         for _ in 0..solution_amount {
             solutions.push(bitvec![1; coords.len()]);
         }
 
         // Pick winning coord index and in how many solutions is it true
-        let winning_coord_idx = rand::random::<usize>() % coords.len();
+        let winning_coord_idx = black_box(rand::random::<usize>() % coords.len());
 
         let non_winning_max_false = solution_amount - 4;
         dbg!(non_winning_max_false);
@@ -205,7 +205,7 @@ fn test_find_best_guess() {
                     solution.set(coord_idx, false);
                 }
             } else {
-                let falses = rand::random::<u8>() % non_winning_max_false;
+                let falses = black_box(rand::random::<u8>() % non_winning_max_false);
                 let mut indexes = (0..solutions.len()).collect::<Vec<_>>();
                 indexes.shuffle(&mut rng);
                 let false_indexes = indexes.iter().take(falses as usize).collect::<Vec<_>>();
@@ -228,5 +228,60 @@ fn test_find_best_guess() {
 
         assert_eq!(best_guess.0, *(coords.get(winning_coord_idx).unwrap()));
         assert!((best_guess.1 - 1.) <= 0.05);
+    }
+}
+
+struct BestGuessMock<const W: usize, const H: usize>(Coord<W, H>, f32, u8);
+
+impl<const W: usize, const H: usize> SolutionContainer<W, H> for BestGuessMock<W, H> {
+    fn find_best_guess(&self) -> (Coord<W, H>, f32) {
+        (self.0, self.1)
+    }
+
+    fn max_mines(&self) -> u8 {
+        self.2
+    }
+
+    fn min_mines(&self) -> u8 {
+        self.2
+    }
+}
+
+/// Ensure that the best guess is always found correctly, at least if the best
+/// guess is trivial.
+#[test]
+fn test_find_best_guess_from_vec() {
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..5000 {
+        // Get guaranteedly the coord_amount of coords.
+        let mut random_coords = CoordSet::<7, 7>::from(true).iter().collect::<Vec<_>>();
+        random_coords.shuffle(&mut rng);
+
+        let hypothetical_max = 100.;
+
+        let solution_amount = black_box(rand::random::<u8>() % 20 + 10);
+        let mut mock_guesses = Vec::new();
+
+        let best_guess_amount = black_box(rand::random::<u8>() % 50 + 50);
+        let best_guess_coord = random_coords.pop().unwrap();
+        let best_guess_propability = best_guess_amount as f32 / hypothetical_max;
+        mock_guesses.push(BestGuessMock(best_guess_coord, best_guess_propability, 10));
+
+        let non_best_guess_max = best_guess_amount - 25;
+
+        for _ in 0..solution_amount {
+            let random_amount = black_box(rand::random::<u8>() % non_best_guess_max);
+            mock_guesses.push(BestGuessMock(
+                random_coords.pop().unwrap(),
+                random_amount as f32 / hypothetical_max,
+                10,
+            ));
+        }
+
+        mock_guesses.shuffle(&mut rng);
+
+        let best_guess = mock_guesses.find_best_guess();
+        assert_eq!(best_guess, (best_guess_coord, best_guess_propability));
     }
 }
