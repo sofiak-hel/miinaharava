@@ -1,3 +1,6 @@
+//! This module contains all of the functional code that is used for the
+//! backtracking algorithm described in the papers.
+
 use arrayvec::ArrayVec;
 use bitvec::vec::BitVec;
 use miinaharava::minefield::{Coord, Matrix};
@@ -13,7 +16,8 @@ use super::{
 pub mod solutions;
 
 impl<const W: usize, const H: usize> CoupledSets<W, H> {
-    /// TODO: Docs
+    /// Find all viable solutions for all constraint sets, so all coupled sets
+    /// of constraints
     pub fn find_viable_solutions(
         &self,
         remaining_mines: u8,
@@ -82,7 +86,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         ordered
     }
 
-    /// TODO: Docs
+    /// Find all the viable solutions only for this specific set of constraints
     pub fn find_viable_solutions(
         &self,
         remaining_mines: u8,
@@ -105,7 +109,12 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         )
     }
 
-    /// TODO: Docs
+    /// Try and find solutions for a specific coordinate-to-constraints list,
+    /// wtih a the specified history. Used in recursion, history can just be
+    /// defined as an empty vec at the start, and list should be what
+    /// [ConstraintSet::find_ordered] returns. testing_field parameter is simply
+    /// the current status of the known field that is then copied and tested
+    /// against.
     #[inline]
     pub fn find_solutions(
         &self,
@@ -126,7 +135,9 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         results
     }
 
-    /// TODO: Docs
+    /// Make a specific guess for the next variable.
+    ///
+    /// See [ConstraintSet::find_solutions]
     fn guess_next(
         &self,
         guess: bool,
@@ -139,7 +150,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         testing_field.set(*coord, CellContent::Known(guess));
         for idx in idx_vec {
             let constraint = &self.constraints[*idx];
-            let (hidden, mines) = guessed_count(constraint, &testing_field);
+            let (hidden, mines) = constraint_counts(constraint, &testing_field);
 
             if constraint.label > (hidden + mines) || mines > constraint.label {
                 None?;
@@ -156,8 +167,9 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
     }
 }
 
-/// TODO: Docs
-fn guessed_count<const W: usize, const H: usize>(
+/// Return the amount of hidden variables and known-to-be-mine variables for the
+/// specified constraint. Used in [ConstraintSet::guess_next]
+fn constraint_counts<const W: usize, const H: usize>(
     constraint: &Constraint<W, H>,
     guessed: &KnownMinefield<W, H>,
 ) -> (u8, u8) {

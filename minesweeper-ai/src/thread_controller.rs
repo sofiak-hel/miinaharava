@@ -11,7 +11,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use fixed::{types::extra::U14, FixedU16, FixedU32};
 use miinaharava::minefield::{GameState, Minefield, Reveal};
 
 use crate::{ai::CSPState, ai::Decision};
@@ -215,11 +214,16 @@ impl StateStats {
     }
 }
 
+/// Represents a set of guessing statistics
 #[derive(Debug, Default, Clone, Copy)]
 pub struct GuessStats {
+    /// The amount of guesses that have been done
     pub amount_of_guesses: u32,
+    /// The amount of guesses that have been successful
     pub successful_guesses: u32,
+    /// The average guess propability
     pub average_guess: f32,
+    /// Total guess propabilities, used to calculate average guess.
     total_guess_probabilities: f32,
 }
 
