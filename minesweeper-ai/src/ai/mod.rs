@@ -5,12 +5,9 @@ use fixed::{types::extra::U20, FixedU32};
 use miinaharava::minefield::{Cell, Coord, Matrix, Minefield, Reveal};
 use rand::seq::SliceRandom;
 
-use crate::ai::backtracking::SolutionContainer;
+use crate::ai::backtracking::solutions::SolutionContainer;
 
-use self::{
-    backtracking::SolutionList, constraint_sets::CoupledSets, constraints::Constraint,
-    coord_set::CoordSet,
-};
+use self::{constraint_sets::CoupledSets, constraints::Constraint, coord_set::CoordSet};
 
 pub mod backtracking;
 pub mod constraint_sets;

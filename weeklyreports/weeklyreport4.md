@@ -30,3 +30,8 @@
 #### 22:20 - 00:30
 - Add find_trivial_solutions for the solution lists
 - Add a bunch of tests, fix a bunch of bugs..
+
+### Sat 15.4.2023
+
+#### 17:00 - 02:00
+- Added educated guessing in all it's glory

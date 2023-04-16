@@ -5,7 +5,7 @@ use miinaharava::minefield::{Coord, Matrix};
 use rand::{seq::SliceRandom, Rng};
 
 use crate::ai::{
-    backtracking::SolutionList,
+    backtracking::solutions::SolutionList,
     constraint_sets::{ConstraintSet, CoupledSets},
     constraints::Constraint,
     coord_set::CoordSet,
