@@ -13,6 +13,37 @@ how much of the tested filebase is covered.
 A more detailed viewing of the coverage can be found here:
 https://codecov.io/gh/sofiak-hel/minesweeper
 
+## Performance and benchmarking
+To do performance and benchmark-testing, you can run `minesweeper-ai` in
+headless-mode, which will give accurate statistics for specifically how much
+time was spent ie. running AI.
+
+Alternatively you can run `cargo bench` which will run a few different
+benchmarks for each difficulty:
+- How long does it take to generate a minefield, and solve it (including time
+  spent revealing)
+- How long does it take to simply generate the minefield
+- How long does it to reveal a mine field and then reveal a random coordinate
+
+`cargo bench` is technically most likely more accurate, but since there is no
+specific benchmark for how long only the revealing takes or how long is only
+spent running AI, it is not optimal for all use cases.
+
+More on the results of benchmarks are found in the implementation document.
+
+
+## Running tests and coverage manually
+Testing can be run simply by running `cargo test` in the root folder of this
+repository.  
+To get coverage in the terminal:
+1. Install tarpaulin with `cargo install cargo-tarpaulin`
+2. Run `cargo tarpaulin --exclude-files='miinaharava/src/minefield_renderer.rs,miinaharava/src/game.rs,miinaharava/src/main.rs,minesweeper-ai/src/main.rs,minesweeper-ai/src/thread_controller.rs,minesweeper-ai/benches/ai.rs' --engine Llvm`
+
+Both here and in codecov.io the files in the above flag are excluded because
+they are highly related to rendering and user input, difficult to test and
+mostly irrelevant to this project and therefore intentionally not tested.
+
+
 ## What is currently tested
 As the program is made of many separate testable bits, all the bits are
 obviously tested as thoroughly as possible separately, or as much as I've had
@@ -95,31 +126,3 @@ test and I haven't had the time to think of how to test it. However:
 4. Guessing is tested so that guessing first always tries a corner, then an edge
    and only after neither work, in the middle. If the guess has to be in the
    middle, guess currently doesn't do any further heuristics for it.
-
-## Performance and benchmarking
-To do performance and benchmark-testing, you can run `minesweeper-ai` in
-headless-mode, which will give accurate statistics for specifically how much
-time was spent ie. running AI.
-
-Alternatively you can run `cargo bench` which will run a few different
-benchmarks for each difficulty:
-- How long does it take to generate a minefield, and solve it (including time
-  spent revealing)
-- How long does it take to simply generate the minefield
-- How long does it to reveal a mine field and then reveal a random coordinate
-
-`cargo bench` is technically most likely more accurate, but since there is no
-specific benchmark for how long only the revealing takes or how long is only
-spent running AI, it is not optimal for all use cases.
-
-
-## Running tests and coverage manually
-Testing can be run simply by running `cargo test` in the root folder of this
-repository.  
-To get coverage in the terminal:
-1. Install tarpaulin with `cargo install cargo-tarpaulin`
-2. Run `cargo tarpaulin --exclude-files='miinaharava/src/minefield_renderer.rs,miinaharava/src/game.rs,miinaharava/src/main.rs,minesweeper-ai/src/main.rs,minesweeper-ai/src/thread_controller.rs,minesweeper-ai/benches/ai.rs' --engine Llvm`
-
-Both here and in codecov.io the files in the above flag are excluded because
-they are highly related to rendering and user input, difficult to test and
-mostly irrelevant to this project and therefore intentionally not tested.
