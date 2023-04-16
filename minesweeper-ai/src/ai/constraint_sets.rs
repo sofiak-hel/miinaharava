@@ -1,15 +1,19 @@
-//! TODO: Docs
+//! This module contains all of the code related to specifically managing
+//! constraint sets. Mostly this means trivial solving and algebreic reducing
+//! and analyzing of the sets.
 
 use miinaharava::minefield::Coord;
 
 use super::{constraints::Constraint, coord_set::CoordSet, CellContent, Decision, KnownMinefield};
 
 #[derive(Debug, Clone, Default)]
-/// TODO: Docs
+/// Represents a Coupled Set of Constraints, so quite literally just a managed
+/// list of [ConstraintSet]
 pub struct CoupledSets<const W: usize, const H: usize>(pub Vec<ConstraintSet<W, H>>);
 
 impl<const W: usize, const H: usize> CoupledSets<W, H> {
-    /// TODO: Docs
+    /// Insert a constraint to this Coupled set, where the constraint is then
+    /// analyzed, trivially solved and constraint sets are combined if needed.
     #[must_use]
     pub fn insert(
         &mut self,
@@ -55,7 +59,8 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
         decisions
     }
 
-    /// TODO: Docs
+    /// Check if this Coupled Set of Constraints could be separated into smaller
+    /// sets.
     pub fn check_splits(&mut self) {
         let mut new_vec = Vec::new();
         while let Some(set) = self.0.pop() {
@@ -66,7 +71,8 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
         self.0 = new_vec;
     }
 
-    /// TODO: Docs
+    /// Get all unconstrained variables, meaning literally all variables that
+    /// are not either known or in the set as variables.
     pub fn unconstrained_variables(
         &self,
         known_minefield: &KnownMinefield<W, H>,
@@ -107,7 +113,8 @@ impl<const W: usize, const H: usize> PartialEq for ConstraintSet<W, H> {
 }
 
 impl<const W: usize, const H: usize> ConstraintSet<W, H> {
-    /// TODO: Docs
+    /// Drain all constraints and variables from other into self effectively
+    /// combining the two.
     pub fn drain_from(&mut self, other: &mut ConstraintSet<W, H>) -> &mut ConstraintSet<W, H> {
         self.constraints.append(&mut other.constraints);
         self.variables.extend(&other.variables);
@@ -116,7 +123,9 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         self
     }
 
-    /// TODO: Docs
+    /// Insert a constraint into this set simultaneously trivially solving it.
+    /// Return Some if trivial solving was successful, None if the constraint
+    /// was added.
     #[must_use]
     pub fn insert(
         &mut self,
@@ -137,7 +146,8 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         }
     }
 
-    /// TOOD: Docs
+    /// Check if this specific Constraint Set could be split into multiple
+    /// different constraint sets.
     pub fn check_splits(self) -> Vec<ConstraintSet<W, H>> {
         let ConstraintSet {
             mut constraints,
@@ -227,7 +237,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         decisions
     }
 
-    /// TODO: Docs
+    /// Try to see if this specific constraint can be trivially solved.
     #[must_use]
     pub fn solve_trivial_constraint(
         constraint: &mut Constraint<W, H>,
@@ -262,13 +272,12 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
         }
     }
 
-    /// TODO: Docs
+    /// Try to reduce this set of constraints as much as possible, reduce being
+    /// the mathematic algebreic meaning.
     pub fn reduce(&mut self) {
         let mut edited = true;
         while edited {
             edited = false;
-            // TODOS:
-            // 3. make tests for CoordSet
             self.constraints.sort_by_key(|i| i.len());
 
             for smallest_idx in 0..self.constraints.len() {

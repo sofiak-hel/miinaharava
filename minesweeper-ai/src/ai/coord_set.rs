@@ -1,5 +1,6 @@
-//! TODO: Docs
-//! Also, TODO: Tests for this module
+//! This module is simply the home for [CoordSet], which is basically a much
+//! more optimized version of HashSet<Coord>
+
 use miinaharava::minefield::{Coord, Matrix};
 
 /// Represents a set of coordinates, exhibits similar behaviour to HashSet, but
@@ -30,7 +31,8 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
         }
     }
 
-    /// TODO: Docs
+    /// Returns a boolean slice of length W, for which all values are the specified
+    /// param, except for the very beginning and end.
     const fn row(middle: bool) -> [bool; W] {
         let mut row = [middle; W];
         row[0] = !middle;
@@ -38,7 +40,7 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
         row
     }
 
-    /// TODO: Docs
+    /// Returns a [CoordSet] where only the corners exist.
     pub const fn corners() -> CoordSet<W, H> {
         let mut c = CoordSet {
             matrix: Matrix([[false; W]; H]),
@@ -48,7 +50,7 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
         c
     }
 
-    /// TODO: Docs
+    /// Returns a [CoordSet] where only the edges exist, but not the corners.
     pub const fn edges() -> CoordSet<W, H> {
         let default = CoordSet::<W, H>::row(false);
         let mut c = CoordSet {

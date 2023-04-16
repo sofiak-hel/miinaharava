@@ -1,4 +1,5 @@
-//! TODO: Docs
+//! This module combines all of the other AI logic into one cohesive module that
+//! is able to utilize everything at once, providing a working AI.
 
 use arrayvec::ArrayVec;
 use fixed::{types::extra::U20, FixedU32};
@@ -53,7 +54,8 @@ pub struct CSPState<const W: usize, const H: usize> {
 }
 
 impl<const W: usize, const H: usize> CSPState<W, H> {
-    /// TODO: Docs
+    /// Ponder on the current state of the game, either making decisions over
+    /// "trivial" problems, or by [CSPState::perform_educated_guess]
     pub fn ponder(
         &mut self,
         reveals: Vec<Reveal<W, H>>,
@@ -141,7 +143,8 @@ impl<const W: usize, const H: usize> CSPState<W, H> {
         }
     }
 
-    /// TODO: Docs
+    /// Perform an educated guess on where to reveal next based on the current
+    /// state of the game.
     pub fn perform_educated_guess(&mut self, minefield: &Minefield<W, H>) -> Vec<Decision<W, H>> {
         let found_mines = self
             .known_fields

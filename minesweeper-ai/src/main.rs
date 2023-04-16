@@ -1,4 +1,8 @@
-//! hello
+//! This is the main module of the program, containing the "running binary"
+//! version of this application. In headless-mode this means simply running
+//! minesweeper games in a background thread and then showing statistics for
+//! said games, and in windowed mode it means showing the game as the AI is
+//! solving it.
 
 #![deny(clippy::all)]
 #![warn(missing_docs)]

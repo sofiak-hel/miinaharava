@@ -1,5 +1,4 @@
-//! TODO: Docs
-//! TODO: Tests for this module
+//! This module contains all of the code related to singular constraints.
 
 use arrayvec::ArrayVec;
 use miinaharava::minefield::Coord;
@@ -20,17 +19,17 @@ pub struct Constraint<const W: usize, const H: usize> {
 }
 
 impl<const W: usize, const H: usize> Constraint<W, H> {
-    /// TODO: Docs
+    /// Amount of variables in this constraint
     pub fn len(&self) -> usize {
         self.variables.len()
     }
 
-    /// TODO: Docs
+    /// Empty = no variables
     pub fn is_empty(&self) -> bool {
         self.variables.is_empty()
     }
 
-    /// TODO: Docs
+    /// Does this constraint contain all of the other constraint's variables.
     pub fn is_superset_of(&self, other: &Constraint<W, H>) -> bool {
         if self.len() > other.len() {
             other.variables.iter().all(|v| self.variables.contains(v))
@@ -39,7 +38,8 @@ impl<const W: usize, const H: usize> Constraint<W, H> {
         }
     }
 
-    /// TODO: Docs
+    /// Remove all of the other constraint's variables once from this
+    /// constraint.
     pub fn subtract(&mut self, other: &Constraint<W, H>) {
         for other_var in &other.variables {
             if let Some(idx) = self.variables.iter().position(|v| v == other_var) {
