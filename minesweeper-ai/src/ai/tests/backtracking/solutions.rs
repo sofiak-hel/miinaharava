@@ -1,9 +1,11 @@
+use std::hint::black_box;
+
 use bitvec::prelude::*;
 use bitvec::vec::BitVec;
 use miinaharava::minefield::{Coord, Matrix};
 use rand::seq::SliceRandom;
 
-use crate::ai::backtracking::solutions::SolutionList;
+use crate::ai::backtracking::solutions::{SolutionContainer, SolutionList};
 use crate::ai::coord_set::CoordSet;
 use crate::ai::tests::constraint_sets::*;
 use crate::ai::{CellContent, Decision};
@@ -14,16 +16,17 @@ fn test_transposed_solution_coord() {
     let mut rng = rand::thread_rng();
 
     for _ in 0..5000 {
-        let solution_count = rand::random::<u8>() % 20 + 5;
+        let solution_count = black_box(rand::random::<u8>() % 20 + 5);
 
-        let coord_amount = rand::random::<u8>() % 20 + 5;
+        let coord_amount = black_box(rand::random::<u8>() % 20 + 5);
         let mut coord_set = CoordSet::<7, 7>::default();
         for _ in 0..coord_amount {
             coord_set.insert(Coord::random());
         }
         let coords = coord_set.iter().collect::<Vec<_>>();
 
-        let mine_amount = (rand::random::<u8>() % (coords.len() as u8) + 1).max(coords.len() as u8);
+        let mine_amount =
+            black_box(rand::random::<u8>() % (coords.len() as u8) + 1).max(coords.len() as u8);
 
         let mut solutions = Vec::new();
         for _ in 0..solution_count {
@@ -116,7 +119,7 @@ fn test_solution_list_trivial_finder_with_nontrivial() {
 fn test_solution_list_trivial_finder_with_random() {
     for _ in 0..5000 {
         let mut known = Matrix([[CellContent::Unknown; 7]; 7]);
-        let coord_amount = rand::random::<u8>() % 10 + 5;
+        let coord_amount = black_box(rand::random::<u8>() % 10 + 5);
         let mut coord_set = CoordSet::<7, 7>::default();
         for _ in 0..coord_amount {
             coord_set.insert(Coord::random());
@@ -124,11 +127,11 @@ fn test_solution_list_trivial_finder_with_random() {
 
         let coords = coord_set.iter().collect::<Vec<_>>();
 
-        let solution_amount = rand::random::<u8>() % 10 + 5;
+        let solution_amount = black_box(rand::random::<u8>() % 10 + 5);
         let mut solutions = Vec::with_capacity(solution_amount as usize);
         for _ in 0..solution_amount {
             let mut solution: BitVec = bitvec![0; coords.len()];
-            solution.fill_with(|_| rand::random());
+            solution.fill_with(|_| black_box(rand::random()));
             solutions.push(solution);
         }
 
@@ -162,5 +165,68 @@ fn test_solution_list_trivial_finder_with_random() {
                 assert!(same_idx_solutions.not_any())
             }
         }
+    }
+}
+
+/// Ensure that the best guess is always found correctly, at least if the best
+/// guess is trivial.
+#[test]
+fn test_find_best_guess() {
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..5000 {
+        let coord_amount = black_box(rand::random::<u8>() % 10 + 5);
+        let mut coord_set = CoordSet::<7, 7>::default();
+
+        // Get guaranteedly the coord_amount of coords.
+        let mut random_coords = CoordSet::<7, 7>::from(true).iter().collect::<Vec<_>>();
+        random_coords.shuffle(&mut rng);
+        for _ in 0..coord_amount {
+            coord_set.insert(random_coords.pop().unwrap());
+        }
+        let coords = coord_set.iter().collect::<Vec<_>>();
+
+        // Generate empty solution lists for now
+        let solution_amount = rand::random::<u8>() % 10 + 5;
+        let mut solutions = Vec::with_capacity(solution_amount as usize);
+        for _ in 0..solution_amount {
+            solutions.push(bitvec![1; coords.len()]);
+        }
+
+        // Pick winning coord index and in how many solutions is it true
+        let winning_coord_idx = rand::random::<usize>() % coords.len();
+
+        let non_winning_max_false = solution_amount - 4;
+        dbg!(non_winning_max_false);
+
+        for (coord_idx, _) in coords.iter().enumerate() {
+            if coord_idx == winning_coord_idx {
+                for solution in &mut solutions {
+                    solution.set(coord_idx, false);
+                }
+            } else {
+                let falses = rand::random::<u8>() % non_winning_max_false;
+                let mut indexes = (0..solutions.len()).collect::<Vec<_>>();
+                indexes.shuffle(&mut rng);
+                let false_indexes = indexes.iter().take(falses as usize).collect::<Vec<_>>();
+                dbg!(&falses);
+                dbg!(&false_indexes);
+                for (solution_idx, solution) in solutions.iter_mut().enumerate() {
+                    if false_indexes.contains(&&solution_idx) {
+                        solution.set(coord_idx, false);
+                    }
+                }
+            }
+        }
+
+        dbg!(winning_coord_idx);
+        dbg!(solutions.iter().map(|v| v.to_string()).collect::<Vec<_>>());
+
+        let solution_list = SolutionList::from(solutions.clone(), coords.clone(), 100);
+
+        let best_guess = solution_list.find_best_guess();
+
+        assert_eq!(best_guess.0, *(coords.get(winning_coord_idx).unwrap()));
+        assert!((best_guess.1 - 1.) <= 0.05);
     }
 }
