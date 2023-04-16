@@ -13,15 +13,15 @@ use crate::ai::{
 
 use super::{into_constraint, into_constraint_vec};
 
-const A: Coord<7, 7> = Coord(4, 2);
-const B: Coord<7, 7> = Coord(5, 2);
-const C: Coord<7, 7> = Coord(6, 2);
-const D: Coord<7, 7> = Coord(0, 5);
-const E: Coord<7, 7> = Coord(6, 5);
-const F: Coord<7, 7> = Coord(0, 2);
-const G: Coord<7, 7> = Coord(3, 6);
-const H: Coord<7, 7> = Coord(0, 6);
-const I: Coord<7, 7> = Coord(6, 6);
+pub const A: Coord<7, 7> = Coord(4, 2);
+pub const B: Coord<7, 7> = Coord(5, 2);
+pub const C: Coord<7, 7> = Coord(6, 2);
+pub const D: Coord<7, 7> = Coord(0, 5);
+pub const E: Coord<7, 7> = Coord(6, 5);
+pub const F: Coord<7, 7> = Coord(0, 2);
+pub const G: Coord<7, 7> = Coord(3, 6);
+pub const H: Coord<7, 7> = Coord(0, 6);
+pub const I: Coord<7, 7> = Coord(6, 6);
 
 #[test]
 fn test_drain() {

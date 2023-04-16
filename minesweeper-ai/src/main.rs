@@ -249,7 +249,7 @@ impl StateStats {
         println!("Game difficulty: {:?}", difficulty);
 
         println!(
-            "\n  Total time spent: {:.1?} (in {} thread(s))",
+            "\n  Total time spent: {:.1?} (x {} thread(s))",
             time,
             args.threads.unwrap_or(1)
         );
