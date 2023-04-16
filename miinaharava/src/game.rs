@@ -83,6 +83,9 @@ pub struct Game<'a> {
     /// Extra layout for use in the implemented binary. Meant for use for text
     /// which helps with user input.
     pub extra_layout: Layout<Color>,
+    pub extra_layout_size: f32,
+    pub extra_layout_keybind_color: Color,
+    pub extra_layout_color: Color,
 }
 
 /// Events propagated from sdl2 [EventPump], contains [Event]s themselves and
@@ -133,6 +136,9 @@ impl<'a> Game<'a> {
             timer_paused: true,
             quit: false,
             extra_layout,
+            extra_layout_color: Color::RGB(0xFF, 0xFF, 0),
+            extra_layout_keybind_color: Color::RED,
+            extra_layout_size: 32.,
         }
     }
 
@@ -227,8 +233,8 @@ impl<'a> Game<'a> {
         size: Option<f32>,
         color: Option<Color>,
     ) {
-        let size = size.unwrap_or(32.);
-        let color = color.unwrap_or(Color::RGB(0xFF, 0xFF, 0));
+        let size = size.unwrap_or(self.extra_layout_size);
+        let color = color.unwrap_or(self.extra_layout_color);
         self.extra_layout.append(
             &self.fonts,
             &TextStyle::with_user_data(&text.into(), size, 0, color),
@@ -239,17 +245,13 @@ impl<'a> Game<'a> {
     /// of text and coloring, in the following format:
     ///
     /// `<red>[keybind]<clear> description`
-    pub fn append_keybind<T: Into<String>, U: Into<String>>(
-        &mut self,
-        keybind: T,
-        description: U,
-        size: Option<f32>,
-        keybind_color: Option<Color>,
-        color: Option<Color>,
-    ) {
-        let keybind_color = keybind_color.unwrap_or(Color::RED);
-        self.append_extra(format!("[{}] ", keybind.into()), size, Some(keybind_color));
-        self.append_extra(format!("{}\n", description.into()), size, color);
+    pub fn append_keybind<T: Into<String>, U: Into<String>>(&mut self, keybind: T, description: U) {
+        self.append_extra(
+            format!("[{}] ", keybind.into()),
+            None,
+            Some(self.extra_layout_keybind_color),
+        );
+        self.append_extra(format!("{}\n", description.into()), None, None);
     }
 
     fn append_text<T: Into<String>>(&mut self, text: T, size: Option<f32>, color: Option<Color>) {
