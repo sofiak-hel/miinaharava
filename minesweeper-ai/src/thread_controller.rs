@@ -109,14 +109,6 @@ impl ThreadController {
     pub fn toggle_pause(&mut self) -> bool {
         let value = !self.paused.load(Ordering::Relaxed);
         self.paused.store(value, Ordering::Relaxed);
-        // If in debug mode, print the state of the CSP when pausing.
-        #[cfg(debug_assertions)]
-        {
-            if value {
-                let lock = self.state.lock().unwrap();
-                lock.print();
-            }
-        }
         value
     }
 }
@@ -160,23 +152,6 @@ impl StateWrapper {
             StateWrapper::Intermediate(s) => s.stats,
             StateWrapper::Expert(s) => s.stats,
         }
-    }
-
-    /// Returns the stats for the current State, convenience function to avoid
-    /// having to match generics.
-    #[cfg(debug_assertions)]
-    pub fn print(&self) {
-        // match self {
-        //     StateWrapper::Easy(s) => {
-        //         dbg!(&s.csp_state);
-        //     }
-        //     StateWrapper::Intermediate(s) => {
-        //         dbg!(&s.csp_state);
-        //     }
-        //     StateWrapper::Expert(s) => {
-        //         dbg!(&s.csp_state);
-        //     }
-        // };
     }
 }
 
@@ -239,7 +214,7 @@ impl GuessStats {
         self.amount_of_guesses += other.amount_of_guesses;
         self.successful_guesses += other.successful_guesses;
         self.total_guess_probabilities += other.total_guess_probabilities;
-        self.average_guess = self.successful_guesses as f32 / self.total_guess_probabilities;
+        self.average_guess = self.total_guess_probabilities / self.amount_of_guesses as f32;
         self
     }
 }
