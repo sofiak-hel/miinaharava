@@ -26,6 +26,11 @@
 > I do implement a custom `Ord` implementation in some places already though.
 
 > Also, if `Vec::sort` is forbidden, what else is? Is `Vec::dedup` for example?
+
+> Otherwise the project I think is mostly done and I think aside from the
+> O-notation analysis in the implementation document the documents too are
+> complete, but I'm still wondering if I'm meeting the criteria for what they
+> should be like. Should there still be something more?
 5. What next?
 > Well, next is at least the review process. Probably some optimization as well,
 > and likely the swapping of the standard libary `Vec::sort`.
