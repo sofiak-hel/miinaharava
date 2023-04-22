@@ -62,7 +62,7 @@ impl<const W: usize, const H: usize> CoupledSets<W, H> {
     /// Check if this Coupled Set of Constraints could be separated into smaller
     /// sets.
     pub fn check_splits(&mut self) {
-        let mut new_vec = Vec::new();
+        let mut new_vec = Vec::with_capacity(self.0.len() * 10);
         while let Some(set) = self.0.pop() {
             if !set.constraints.is_empty() {
                 new_vec.extend(set.check_splits());
@@ -154,7 +154,7 @@ impl<const W: usize, const H: usize> ConstraintSet<W, H> {
             variables: _,
         } = self;
 
-        let mut sets: Vec<ConstraintSet<W, H>> = Vec::new();
+        let mut sets: Vec<ConstraintSet<W, H>> = Vec::with_capacity(10);
 
         while let Some(constraint) = constraints.pop() {
             let (mut indexes, found_sets): (Vec<usize>, Vec<&mut ConstraintSet<W, H>>) = sets
