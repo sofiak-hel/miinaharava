@@ -18,7 +18,8 @@
 5. What next?
 > Next up is still next week's review. I also realized I still do have
 > Constraint tests to do still, and the O-notation analysis, which I have been
-> procrastinating on.
+> procrastinating on. If I get super motivated, I might add separate rulesets to
+> test minesweeper on, but the instructor already said that it's not necessary.
 
 ## Time spent (total 3h 50 min)
 
