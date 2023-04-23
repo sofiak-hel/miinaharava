@@ -68,10 +68,9 @@ Here are the tests for the actual AI part, which I will again divide into a few
 subsections because it is made of quite a bit of different modules.
 
 #### CoordSet
-Coord set is not very thoroughly tested, because it's implementation is fairly
-trivial. However it's transpose function is thoroughly tested, and it does have
-a few tests in the form of documentation examples, which should account for
-something.
+All the functions for CoordSet are fairly simple, so for each one except for
+inserting and removing there is a test to check against a definitely working
+alternative, so that it works as intended.
 
 #### Backtracking
 The backtracking algorithm is much more thoroughly tested:
