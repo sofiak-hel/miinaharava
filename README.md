@@ -20,3 +20,4 @@ This repository contains two Rust projects:
 3. [Report 3](./weeklyreports/weeklyreport3.md)
 4. [Report 4](./weeklyreports/weeklyreport4.md)
 5. [Report 5](./weeklyreports/weeklyreport5.md)
+5. [Report 6](./weeklyreports/weeklyreport6.md)
