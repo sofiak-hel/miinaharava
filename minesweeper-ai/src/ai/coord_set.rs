@@ -185,7 +185,6 @@ impl<const W: usize, const H: usize> CoordSet<W, H> {
     ///
     /// assert_eq!(set.contains(Coord(5, 5)), false);
     /// ```
-    #[allow(dead_code)]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (&mut bool, Coord<W, H>)> + '_ {
         self.matrix.0.iter_mut().enumerate().flat_map(|(y, row)| {
             row.iter_mut()

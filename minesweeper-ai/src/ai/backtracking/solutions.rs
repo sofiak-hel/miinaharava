@@ -70,8 +70,9 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
     }
 
     /// Safely get a list of solutions for any amount of mines. None if there
-    /// are no solutions for that amount of mines, Some if there might be.
-    #[allow(dead_code)]
+    /// are no solutions for that amount of mines, Some if there might be. Used
+    /// only in tests.
+    #[cfg(test)]
     pub fn get(&self, mine_count: u8) -> Option<&Vec<PossibleSolution>> {
         if self.min_mines > mine_count || mine_count > self.max_mines {
             None
@@ -80,7 +81,9 @@ impl<const W: usize, const H: usize> SolutionList<W, H> {
         }
     }
 
-    /// Does the same as get, but a mutable list.
+    /// Safely get a list of solutions mutably for any amount of mines. None if
+    /// there are no solutions for that amount of mines, Some if there might be.
+    /// Used only in tests.
     pub fn get_mut(&mut self, mine_count: u8) -> Option<&mut Vec<PossibleSolution>> {
         if self.min_mines > mine_count || mine_count > self.max_mines {
             None
