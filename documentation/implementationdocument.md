@@ -105,7 +105,22 @@ Total guesses:
 ```
 
 ## O-notation analysis
-To be done! I have not the energy to make this for this week, sorry!
+I've procrastinated making the O-notation analysis for so long, that I don't
+really have the energy to make one in the end. The be clear, O-notation analysis
+for an algorithm of this size and complexity might also simply be not
+applicable, as there are so many if-statements and branches to the algorithm,
+that there are many different approaches to how someone could craft one on the
+end. If I were to make one, I would probably end up making simply a worst-case
+and a best-case scenario analysis separately without an attempt to make a
+"generic" analysis, and even then I would have to make a O-notation based on
+performing a guess and constructing the constraint-set separately, hard work.
+
+One simple point I can point out though, according to [this
+paper](https://www.cs.toronto.edu/~cvs/minesweeper/minesweeper.pdf) the
+backtracking algorithm is roughly exponential to the difference in amount of
+constraints and variables, so if `c` is the amount of constraints and `v` is the
+amount of variables, it would probably resemble something alike to `O(n^(c-v))`.
+Already somewhat complicated.
 
 ## Project structure
 The project is split into two different entire programs.
